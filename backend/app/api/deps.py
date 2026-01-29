@@ -1,29 +1,32 @@
-# Dependency injection (DB sessions, etc.)
+"""API dependencies."""
 from typing import AsyncGenerator
 from uuid import UUID
 
-from fastapi import Header, HTTPException
+from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.database import get_db as _get_db
+from app.db.database import async_session_maker
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
-    Database session dependency.
+    Dependency that provides a database session.
     
     Yields:
         AsyncSession: Database session
     """
-    async for session in _get_db():
-        yield session
+    async with async_session_maker() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
 
 
 async def get_current_project_id(
-    x_project_id: str = Header(..., description="Project ID")
+    x_project_id: str = Header(..., alias="X-Project-ID"),
 ) -> UUID:
     """
-    Extract and validate project ID from request header.
+    Dependency that extracts and validates project ID from header.
     
     Args:
         x_project_id: Project ID from X-Project-ID header
@@ -32,13 +35,13 @@ async def get_current_project_id(
         UUID: Validated project ID
         
     Raises:
-        HTTPException: If project ID is missing or invalid
+        HTTPException: If header is missing or invalid
     """
     try:
         return UUID(x_project_id)
-    except (ValueError, AttributeError):
+    except ValueError:
         raise HTTPException(
-            status_code=400,
-            detail="Invalid or missing X-Project-ID header"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid project ID format",
         )
 
