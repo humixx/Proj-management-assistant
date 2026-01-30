@@ -1,2 +1,14 @@
-# Tools package
+"""Agent tools package."""
+from app.agent.tools.base import BaseTool
+from app.agent.tools.registry import ToolRegistry
+from app.agent.tools.rag_tools import SearchDocumentsTool
+from app.agent.tools.task_tools import CreateTaskTool, BulkCreateTasksTool, ListTasksTool
 
+__all__ = [
+    "BaseTool",
+    "ToolRegistry",
+    "SearchDocumentsTool",
+    "CreateTaskTool",
+    "BulkCreateTasksTool",
+    "ListTasksTool",
+]
