@@ -58,15 +58,15 @@ async def health_check() -> dict:
 
 
 # Include routers
-from app.api.routes import projects, tasks, documents
+from app.api.routes import projects, tasks, documents, chat
 
 app.include_router(projects.router, prefix="/projects", tags=["projects"])
 app.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
+app.include_router(chat.router, prefix="/chat", tags=["chat"])
 
 # Additional routers (commented out for now, will add as we implement)
-# from app.api.routes import teams, chat, integrations
+# from app.api.routes import teams, integrations
 # app.include_router(teams.router, prefix="/teams", tags=["teams"])
-# app.include_router(chat.router, prefix="/chat", tags=["chat"])
 # app.include_router(integrations.router, prefix="/integrations", tags=["integrations"])
 
