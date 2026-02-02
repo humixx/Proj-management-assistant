@@ -4,7 +4,9 @@ import { ChatRequest, ChatResponse, ChatHistoryResponse } from '@/types';
 export const chatApi = {
   sendMessage: async (message: string): Promise<ChatResponse> => {
     const data: ChatRequest = { message, include_context: true };
-    const response = await apiClient.post<ChatResponse>('/chat', data);
+    const response = await apiClient.post<ChatResponse>('/chat', data, {
+      timeout: 120000, // 2 minutes for complex operations like creating multiple tasks
+    });
     return response.data;
   },
   getHistory: async (limit = 50): Promise<ChatHistoryResponse> => {

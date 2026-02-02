@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # Vector Search
     EMBEDDING_DIMENSION: int = 1024
     TOP_K_RESULTS: int = 5
-    SIMILARITY_THRESHOLD: float = 0.7
+    SIMILARITY_THRESHOLD: float = 0.3
     
     model_config = SettingsConfigDict(env_file=".env")
 
