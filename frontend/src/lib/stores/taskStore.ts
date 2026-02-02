@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { Task, TaskCreate, TaskUpdate, TaskStatus } from '@/types';
-import { tasksApi } from '@/lib/api';
+import { tasksApi, getCurrentProjectId } from '@/lib/api';
 
 interface TaskState {
   tasks: Task[];
   isLoading: boolean;
   error: string | null;
+  currentProjectId: string | null;
   fetchTasks: () => Promise<void>;
   createTask: (data: TaskCreate) => Promise<Task>;
   updateTask: (taskId: string, data: TaskUpdate) => Promise<void>;
@@ -18,12 +19,25 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: [],
   isLoading: false,
   error: null,
+  currentProjectId: null,
 
   fetchTasks: async () => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      set({ error: 'No project selected', isLoading: false });
+      return;
+    }
+
+    // Clear tasks if project changed
+    const currentState = get();
+    if (currentState.currentProjectId !== projectId) {
+      set({ tasks: [], currentProjectId: projectId });
+    }
+
     set({ isLoading: true, error: null });
     try {
       const response = await tasksApi.list();
-      set({ tasks: response.tasks, isLoading: false });
+      set({ tasks: response.tasks, isLoading: false, currentProjectId: projectId });
     } catch (error: any) {
       set({ error: error.response?.data?.detail || 'Failed to fetch tasks', isLoading: false });
     }

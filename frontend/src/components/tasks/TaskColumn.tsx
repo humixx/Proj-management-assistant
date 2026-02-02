@@ -1,57 +1,36 @@
-import TaskCard, { Task } from './TaskCard';
+'use client';
+
+import { Task, TaskStatus } from '@/types';
+import TaskCard from './TaskCard';
 
 interface TaskColumnProps {
+  status: TaskStatus;
   title: string;
-  status: Task['status'];
   tasks: Task[];
-  onTaskClick: (task: Task) => void;
-  onAddTask?: () => void;
 }
 
-export default function TaskColumn({
-  title,
-  status,
-  tasks,
-  onTaskClick,
-  onAddTask,
-}: TaskColumnProps) {
-  const getStatusColor = (status: Task['status']) => {
-    switch (status) {
-      case 'todo':
-        return 'border-gray-300 bg-gray-50';
-      case 'in_progress':
-        return 'border-blue-300 bg-blue-50';
-      case 'done':
-        return 'border-green-300 bg-green-50';
-      case 'blocked':
-        return 'border-red-300 bg-red-50';
-      default:
-        return 'border-gray-300 bg-gray-50';
-    }
+export default function TaskColumn({ status, title, tasks }: TaskColumnProps) {
+  const bgColors: Record<TaskStatus, string> = {
+    todo: 'bg-gray-100',
+    in_progress: 'bg-blue-50',
+    review: 'bg-yellow-50',
+    done: 'bg-green-50',
   };
 
   return (
-    <div className={`flex-1 min-w-[280px] rounded-lg border-2 ${getStatusColor(status)}`}>
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">{title}</h3>
-          <span className="text-sm text-gray-500 bg-white px-2 py-1 rounded-full">
-            {tasks.length}
-          </span>
+    <div className="flex-shrink-0 w-80">
+      <div className={`rounded-lg ${bgColors[status]} p-4`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900 text-base">{title}</h3>
+          <span className="px-3 py-1 text-xs bg-white rounded-full font-medium shadow-sm">{tasks.length}</span>
         </div>
-      </div>
-      <div className="p-4 space-y-3 min-h-[200px] max-h-[600px] overflow-y-auto">
-        {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} onClick={onTaskClick} />
-        ))}
-        {onAddTask && (
-          <button
-            onClick={onAddTask}
-            className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors"
-          >
-            + Add Task
-          </button>
-        )}
+        <div className="space-y-3 min-h-[200px] max-h-[calc(100vh-250px)] overflow-y-auto pr-1">
+          {tasks.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 text-sm">No tasks</div>
+          ) : (
+            tasks.map((task) => <TaskCard key={task.id} task={task} />)
+          )}
+        </div>
       </div>
     </div>
   );

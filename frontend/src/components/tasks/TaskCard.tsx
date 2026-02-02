@@ -1,89 +1,92 @@
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'todo' | 'in_progress' | 'done' | 'blocked';
-  priority?: 'low' | 'medium' | 'high';
-  assignee?: string;
-  dueDate?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
+'use client';
+
+import { useState } from 'react';
+import { Task, TaskStatus, TaskPriority } from '@/types';
+import { useTaskStore } from '@/lib/stores';
+
+const priorityColors: Record<TaskPriority, string> = {
+  low: 'bg-gray-100 text-gray-600',
+  medium: 'bg-blue-100 text-blue-600',
+  high: 'bg-orange-100 text-orange-600',
+  critical: 'bg-red-100 text-red-600',
+};
 
 interface TaskCardProps {
   task: Task;
-  onClick: (task: Task) => void;
 }
 
-export default function TaskCard({ task, onClick }: TaskCardProps) {
-  const getPriorityColor = (priority?: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+export default function TaskCard({ task }: TaskCardProps) {
+  const { updateTask } = useTaskStore();
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleStatusChange = async (newStatus: TaskStatus) => {
+    if (newStatus === task.status) return;
+    setIsUpdating(true);
+    await updateTask(task.id, { status: newStatus });
+    setIsUpdating(false);
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  const toggleExpand = () => setIsExpanded(!isExpanded);
 
   return (
-    <div
-      onClick={() => onClick(task)}
-      className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+    <div 
+      className={`bg-white rounded-lg p-4 shadow-sm border hover:shadow-md transition-all cursor-pointer ${isUpdating ? 'opacity-50' : ''}`}
+      onClick={toggleExpand}
     >
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-900 flex-1">{task.title}</h3>
-        {task.priority && (
-          <span
-            className={`ml-2 px-2 py-1 text-xs font-medium rounded border ${getPriorityColor(
-              task.priority
-            )}`}
-          >
-            {task.priority}
-          </span>
-        )}
-      </div>
+      <h4 className={`font-medium text-gray-900 text-sm mb-2 ${isExpanded ? '' : 'line-clamp-2'}`}>
+        {task.title}
+      </h4>
+      
       {task.description && (
-        <p className="text-xs text-gray-600 mb-3 line-clamp-2">{task.description}</p>
+        <p className={`text-xs text-gray-600 mb-3 whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-3'}`}>
+          {task.description}
+        </p>
       )}
-      <div className="flex items-center justify-between text-xs text-gray-500">
-        {task.dueDate && (
-          <div className="flex items-center space-x-1">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <span>{formatDate(task.dueDate)}</span>
-          </div>
-        )}
-        {task.assignee && (
-          <div className="flex items-center space-x-1">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-            <span>{task.assignee}</span>
-          </div>
-        )}
+
+      <div className="flex items-center justify-between mb-2">
+        <span className={`px-2 py-1 text-xs rounded-full font-medium ${priorityColors[task.priority]}`}>
+          {task.priority}
+        </span>
+        <select
+          value={task.status}
+          onChange={(e) => {
+            e.stopPropagation();
+            handleStatusChange(e.target.value as TaskStatus);
+          }}
+          disabled={isUpdating}
+          className="text-xs border rounded px-2 py-1 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="review">Review</option>
+          <option value="done">Done</option>
+        </select>
       </div>
+
+      {(task.assignee || task.due_date) && (
+        <div className="flex flex-wrap gap-2 text-xs text-gray-500 border-t pt-2">
+          {task.assignee && (
+            <span className="flex items-center gap-1">
+              <span className="font-medium">👤</span>
+              {task.assignee}
+            </span>
+          )}
+          {task.due_date && (
+            <span className="flex items-center gap-1">
+              <span className="font-medium">📅</span>
+              {new Date(task.due_date).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+      )}
+
+      {isExpanded && (
+        <div className="mt-2 pt-2 border-t text-xs text-gray-400">
+          Click to collapse
+        </div>
+      )}
     </div>
   );
 }

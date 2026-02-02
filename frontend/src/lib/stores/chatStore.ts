@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { LocalMessage, ChatResponse } from '@/types';
-import { chatApi } from '@/lib/api';
+import { chatApi, getCurrentProjectId } from '@/lib/api';
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -9,6 +9,7 @@ interface ChatState {
   isLoading: boolean;
   isSending: boolean;
   error: string | null;
+  currentProjectId: string | null;
   fetchHistory: () => Promise<void>;
   sendMessage: (content: string) => Promise<ChatResponse | null>;
   clearHistory: () => Promise<void>;
@@ -20,12 +21,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoading: false,
   isSending: false,
   error: null,
+  currentProjectId: null,
 
   fetchHistory: async () => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      set({ error: 'No project selected', isLoading: false });
+      return;
+    }
+
+    // Clear messages if project changed
+    const currentState = get();
+    if (currentState.currentProjectId !== projectId) {
+      set({ messages: [], currentProjectId: projectId });
+    }
+
     set({ isLoading: true, error: null });
     try {
       const response = await chatApi.getHistory();
-      set({ messages: response.messages.map((m) => ({ ...m, pending: false })), isLoading: false });
+      set({ messages: response.messages.map((m) => ({ ...m, pending: false })), isLoading: false, currentProjectId: projectId });
     } catch (error: any) {
       set({ error: error.response?.data?.detail || 'Failed to fetch history', isLoading: false });
     }
@@ -52,10 +66,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
         created_at: new Date().toISOString(),
         pending: false,
       };
-      set((state) => ({ messages: [...state.messages, assistantMessage], isSending: false }));
+      set((state) => ({ messages: [...state.messages, assistantMessage], isSending: false, error: null }));
       return response;
     } catch (error: any) {
-      set({ error: error.response?.data?.detail || 'Failed to send message', isSending: false });
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to send message';
+      console.error('Chat error:', errorMessage, error);
+      set({ error: errorMessage, isSending: false });
       return null;
     }
   },

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Document } from '@/types';
-import { documentsApi } from '@/lib/api';
+import { documentsApi, getCurrentProjectId } from '@/lib/api';
 
 interface DocumentState {
   documents: Document[];
@@ -8,6 +8,7 @@ interface DocumentState {
   isLoading: boolean;
   isUploading: boolean;
   error: string | null;
+  currentProjectId: string | null;
   fetchDocuments: () => Promise<void>;
   uploadDocument: (file: File) => Promise<Document | null>;
   deleteDocument: (documentId: string) => Promise<void>;
@@ -21,12 +22,25 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   isLoading: false,
   isUploading: false,
   error: null,
+  currentProjectId: null,
 
   fetchDocuments: async () => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      set({ error: 'No project selected', isLoading: false });
+      return;
+    }
+
+    // Clear documents if project changed
+    const currentState = get();
+    if (currentState.currentProjectId !== projectId) {
+      set({ documents: [], currentProjectId: projectId });
+    }
+
     set({ isLoading: true, error: null });
     try {
       const response = await documentsApi.list();
-      set({ documents: response.documents, isLoading: false });
+      set({ documents: response.documents, isLoading: false, currentProjectId: projectId });
     } catch (error: any) {
       set({ error: error.response?.data?.detail || 'Failed to fetch documents', isLoading: false });
     }
