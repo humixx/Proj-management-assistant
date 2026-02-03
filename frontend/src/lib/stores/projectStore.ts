@@ -2,6 +2,10 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Project, ProjectCreate } from '@/types';
 import { projectsApi, setCurrentProjectId } from '@/lib/api';
+import { useUIStore } from './uiStore';
+
+// Helper to get addToast outside of React
+const getAddToast = () => useUIStore.getState().addToast;
 
 interface ProjectState {
   projects: Project[];
@@ -38,9 +42,12 @@ export const useProjectStore = create<ProjectState>()(
         try {
           const project = await projectsApi.create(data);
           set((state) => ({ projects: [project, ...state.projects], isLoading: false }));
+          getAddToast()('success', `Project "${project.name}" created`);
           return project;
         } catch (error: any) {
-          set({ error: error.response?.data?.detail || 'Failed to create project', isLoading: false });
+          const message = error.response?.data?.detail || 'Failed to create project';
+          set({ error: message, isLoading: false });
+          getAddToast()('error', message);
           throw error;
         }
       },
@@ -59,8 +66,11 @@ export const useProjectStore = create<ProjectState>()(
             currentProject: state.currentProject?.id === projectId ? null : state.currentProject,
             isLoading: false,
           }));
+          getAddToast()('success', 'Project deleted');
         } catch (error: any) {
-          set({ error: error.response?.data?.detail || 'Failed to delete', isLoading: false });
+          const message = error.response?.data?.detail || 'Failed to delete project';
+          set({ error: message, isLoading: false });
+          getAddToast()('error', message);
         }
       },
 

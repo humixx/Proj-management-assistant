@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { Document } from '@/types';
 import { documentsApi, getCurrentProjectId } from '@/lib/api';
+import { useUIStore } from './uiStore';
+
+// Helper to get addToast outside of React
+const getAddToast = () => useUIStore.getState().addToast;
 
 interface DocumentState {
   documents: Document[];
@@ -57,9 +61,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         isUploading: false,
         uploadProgress: {},
       }));
+      getAddToast()('success', `"${file.name}" uploaded successfully`);
       return document;
     } catch (error: any) {
-      set({ error: error.response?.data?.detail || 'Failed to upload', isUploading: false, uploadProgress: {} });
+      const message = error.response?.data?.detail || 'Failed to upload document';
+      set({ error: message, isUploading: false, uploadProgress: {} });
+      getAddToast()('error', message);
       return null;
     }
   },
@@ -68,8 +75,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     try {
       await documentsApi.delete(documentId);
       set((state) => ({ documents: state.documents.filter((d) => d.id !== documentId) }));
+      getAddToast()('success', 'Document deleted');
     } catch (error: any) {
-      set({ error: error.response?.data?.detail || 'Failed to delete' });
+      const message = error.response?.data?.detail || 'Failed to delete document';
+      set({ error: message });
+      getAddToast()('error', message);
     }
   },
 
