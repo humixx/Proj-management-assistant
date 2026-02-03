@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Document } from '@/types';
 import { useDocumentStore } from '@/lib/stores';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 interface DocumentCardProps {
   document: Document;
@@ -11,6 +12,7 @@ interface DocumentCardProps {
 export default function DocumentCard({ document }: DocumentCardProps) {
   const { deleteDocument, refreshDocument } = useDocumentStore();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Poll for processing status
   useEffect(() => {
@@ -21,9 +23,10 @@ export default function DocumentCard({ document }: DocumentCardProps) {
   }, [document.id, document.processed, refreshDocument]);
 
   const handleDelete = async () => {
-    if (!confirm('Delete this document?')) return;
     setIsDeleting(true);
     await deleteDocument(document.id);
+    setIsDeleting(false);
+    setShowDeleteConfirm(false);
   };
 
   const formatSize = (bytes: number | null) => {
@@ -48,13 +51,24 @@ export default function DocumentCard({ document }: DocumentCardProps) {
           </div>
         </div>
         <button
-          onClick={handleDelete}
+          onClick={() => setShowDeleteConfirm(true)}
           disabled={isDeleting}
           className="p-1 text-gray-400 hover:text-red-500 disabled:opacity-50"
         >
           🗑️
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="Delete Document"
+        message={`Are you sure you want to delete "${document.filename}"? This will also remove all processed chunks.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

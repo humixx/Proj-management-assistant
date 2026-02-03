@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useProjectStore } from '@/lib/stores';
 import { Project } from '@/types';
+import { validateProjectName } from '@/utils/validators';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -12,6 +13,7 @@ export default function Sidebar() {
   const { projects, currentProject, isLoading, fetchProjects, selectProject, createProject } = useProjectStore();
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [nameError, setNameError] = useState('');
 
   useEffect(() => {
     fetchProjects();
@@ -24,7 +26,14 @@ export default function Sidebar() {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProjectName.trim()) return;
+    
+    const validation = validateProjectName(newProjectName);
+    if (!validation.isValid) {
+      setNameError(validation.error || '');
+      return;
+    }
+    setNameError('');
+    
     try {
       const project = await createProject({ name: newProjectName.trim() });
       selectProject(project);
@@ -33,6 +42,7 @@ export default function Sidebar() {
       router.push(`/projects/${project.id}/chat`);
     } catch (error) {
       console.error('Failed to create project:', error);
+      setNameError('Failed to create project. Please try again.');
     }
   };
 
@@ -76,14 +86,30 @@ export default function Sidebar() {
                 <input
                   type="text"
                   value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
+                  onChange={(e) => {
+                    setNewProjectName(e.target.value);
+                    if (nameError) setNameError('');
+                  }}
                   placeholder="Project name..."
-                  className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-md text-white"
+                  className={`w-full px-3 py-2 text-sm bg-gray-800 border rounded-md text-white ${
+                    nameError ? 'border-red-500' : 'border-gray-600'
+                  }`}
                   autoFocus
                 />
+                {nameError && <p className="text-xs text-red-400 mt-1">{nameError}</p>}
                 <div className="flex gap-2 mt-2">
-                  <button type="submit" className="flex-1 px-3 py-1 text-xs bg-blue-600 rounded-md">Create</button>
-                  <button type="button" onClick={() => setIsCreating(false)} className="flex-1 px-3 py-1 text-xs bg-gray-700 rounded-md">Cancel</button>
+                  <button type="submit" className="flex-1 px-3 py-1 text-xs bg-blue-600 rounded-md hover:bg-blue-700">Create</button>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setIsCreating(false);
+                      setNameError('');
+                      setNewProjectName('');
+                    }} 
+                    className="flex-1 px-3 py-1 text-xs bg-gray-700 rounded-md hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </form>
             ) : (
