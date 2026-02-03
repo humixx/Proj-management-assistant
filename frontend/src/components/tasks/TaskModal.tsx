@@ -2,6 +2,8 @@
 
 import { Task } from './TaskCard';
 import { useState, useEffect } from 'react';
+import { validateTaskTitle, validateTaskDescription } from '@/utils/validators';
+import FormField from '@/components/ui/FormField';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -26,6 +28,8 @@ export default function TaskModal({
     assignee: '',
     dueDate: '',
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (task) {
@@ -55,6 +59,25 @@ export default function TaskModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate
+    const titleValidation = validateTaskTitle(formData.title);
+    const descValidation = validateTaskDescription(formData.description);
+    
+    const newErrors: Record<string, string> = {};
+    if (!titleValidation.isValid) {
+      newErrors.title = titleValidation.error || '';
+    }
+    if (!descValidation.isValid) {
+      newErrors.description = descValidation.error || '';
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    
+    setErrors({});
     onSave({
       ...formData,
       dueDate: formData.dueDate ? new Date(formData.dueDate) : undefined,
@@ -78,36 +101,35 @@ export default function TaskModal({
               </h3>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title *
-                  </label>
+                <FormField label="Title" error={errors.title} required>
                   <input
                     type="text"
-                    required
                     value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                    className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value });
+                      if (errors.title) setErrors({ ...errors, title: '' });
+                    }}
+                    className={`w-full px-3 py-2 text-gray-900 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.title ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     placeholder="Enter task title"
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
+                <FormField label="Description" error={errors.description} helpText="Optional (max 1000 characters)">
                   <textarea
                     value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setFormData({ ...formData, description: e.target.value });
+                      if (errors.description) setErrors({ ...errors, description: '' });
+                    }}
                     rows={3}
-                    className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full px-3 py-2 text-gray-900 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.description ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     placeholder="Enter task description"
                   />
-                </div>
+                </FormField>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>

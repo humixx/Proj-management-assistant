@@ -27,6 +27,26 @@ export default function TaskBoard({ projectId }: TaskBoardProps) {
     return <div className="text-center py-12 text-gray-500">Loading tasks...</div>;
   }
 
+  const totalTasks = tasks.length;
+
+  // Show empty state for completely empty board
+  if (!isLoading && totalTasks === 0) {
+    return (
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {columns.map((col) => (
+          <div key={col.status} className="flex-shrink-0 w-72">
+            <div className="rounded-lg bg-gray-50 p-3 border-2 border-dashed border-gray-200">
+              <h3 className="font-medium text-gray-400 mb-3">{col.title}</h3>
+              <div className="text-center py-8 text-gray-400 text-sm">
+                No tasks
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-6 overflow-x-auto pb-6 px-2">
       {columns.map((col) => (

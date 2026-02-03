@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useChatStore, useTaskStore } from '@/lib/stores';
 import ChatInput from './ChatInput';
 import MessageBubble from './MessageBubble';
+import { NoChatEmpty } from '@/components/ui/EmptyState';
 
 interface ChatWindowProps {
   projectId: string;
@@ -63,10 +64,7 @@ export default function ChatWindow({ projectId }: ChatWindowProps) {
         {isLoading ? (
           <div className="text-center text-gray-600 font-medium">Loading...</div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-500 mt-20">
-            <p className="text-xl font-semibold text-gray-700 mb-2">Start a conversation</p>
-            <p className="text-base">Upload documents and ask me to analyze them or create tasks</p>
-          </div>
+          <NoChatEmpty />
         ) : (
           <div className="space-y-4">
             {messages.map((msg) => (
