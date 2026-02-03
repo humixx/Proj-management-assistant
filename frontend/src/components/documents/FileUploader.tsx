@@ -9,6 +9,7 @@ export default function FileUploader() {
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+    
     for (const file of Array.from(files)) {
       await uploadDocument(file);
     }
@@ -21,14 +22,14 @@ export default function FileUploader() {
         <input
           type="file"
           onChange={handleFileChange}
-          accept=".pdf,.docx"
+          accept=".pdf,.docx,.doc,.txt"
           multiple
           disabled={isUploading}
           className="hidden"
         />
         <div className="text-gray-500">
           <p className="mb-1">Click to upload or drag and drop</p>
-          <p className="text-sm text-gray-400">PDF and DOCX files</p>
+          <p className="text-sm text-gray-400">PDF, DOCX, and TXT files</p>
         </div>
       </label>
 
