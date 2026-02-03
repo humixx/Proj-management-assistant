@@ -34,7 +34,9 @@ export default function Home() {
         
         for (const project of projectsData.data.projects || []) {
           try {
-            const tasksResponse = await apiClient.get(`/tasks?project_id=${project.id}`);
+            const tasksResponse = await apiClient.get('/tasks', {
+              headers: { 'X-Project-ID': project.id }
+            });
             allTasks.push(...(tasksResponse.data.tasks || []));
           } catch (error) {
             console.error(`Error fetching tasks for project ${project.id}:`, error);
@@ -63,7 +65,9 @@ export default function Home() {
         // Add recent documents
         for (const project of projectsData.data.projects || []) {
           try {
-            const docsResponse = await apiClient.get(`/documents?project_id=${project.id}`);
+            const docsResponse = await apiClient.get('/documents', {
+              headers: { 'X-Project-ID': project.id }
+            });
             (docsResponse.data.documents || [])
               .sort((a: Document, b: Document) => 
                 new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -74,7 +78,7 @@ export default function Home() {
                   id: `doc-${doc.id}`,
                   type: 'document',
                   title: doc.filename,
-                  description: `Document uploaded and ${doc.status === 'processed' ? 'processed' : 'processing'}`,
+                  description: `Document uploaded and ${doc.processed ? 'processed' : 'processing'}`,
                   timestamp: doc.created_at,
                   projectName: project.name,
                 });
@@ -116,13 +120,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Dashboard Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-4xl font-bold text-gray-900 mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
             Welcome Back
           </h2>
-          <p className="text-lg text-gray-700">
+          <p className="text-base sm:text-lg text-gray-700">
             Your AI-powered project management dashboard
           </p>
         </div>
@@ -209,9 +213,9 @@ export default function Home() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6 mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <Link
               href="/projects"
               className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors group"
@@ -296,8 +300,8 @@ export default function Home() {
         </div>
 
         {/* Recent Activity Section */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Activity</h3>
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Recent Activity</h3>
           {isLoading ? (
             <div className="text-center py-12">
               <div className="animate-pulse">

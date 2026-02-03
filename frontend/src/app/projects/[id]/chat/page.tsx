@@ -23,7 +23,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-full p-6">
+    <div className="h-full p-4 sm:p-6">
       <ChatWindow projectId={projectId} />
     </div>
   );
