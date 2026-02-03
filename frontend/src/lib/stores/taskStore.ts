@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { Task, TaskCreate, TaskUpdate, TaskStatus } from '@/types';
 import { tasksApi, getCurrentProjectId } from '@/lib/api';
+import { useUIStore } from './uiStore';
+
+// Helper to get addToast outside of React
+const getAddToast = () => useUIStore.getState().addToast;
 
 interface TaskState {
   tasks: Task[];
@@ -48,9 +52,12 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const task = await tasksApi.create(data);
       set((state) => ({ tasks: [task, ...state.tasks], isLoading: false }));
+      getAddToast()('success', `Task "${task.title}" created`);
       return task;
     } catch (error: any) {
-      set({ error: error.response?.data?.detail || 'Failed to create task', isLoading: false });
+      const message = error.response?.data?.detail || 'Failed to create task';
+      set({ error: message, isLoading: false });
+      getAddToast()('error', message);
       throw error;
     }
   },
@@ -59,8 +66,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const updated = await tasksApi.update(taskId, data);
       set((state) => ({ tasks: state.tasks.map((t) => (t.id === taskId ? updated : t)) }));
+      getAddToast()('success', 'Task updated');
     } catch (error: any) {
-      set({ error: error.response?.data?.detail || 'Failed to update task' });
+      const message = error.response?.data?.detail || 'Failed to update task';
+      set({ error: message });
+      getAddToast()('error', message);
     }
   },
 
@@ -68,8 +78,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       await tasksApi.delete(taskId);
       set((state) => ({ tasks: state.tasks.filter((t) => t.id !== taskId) }));
+      getAddToast()('success', 'Task deleted');
     } catch (error: any) {
-      set({ error: error.response?.data?.detail || 'Failed to delete task' });
+      const message = error.response?.data?.detail || 'Failed to delete task';
+      set({ error: message });
+      getAddToast()('error', message);
     }
   },
 

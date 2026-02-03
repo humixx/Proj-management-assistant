@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { LocalMessage, ChatResponse } from '@/types';
 import { chatApi, getCurrentProjectId } from '@/lib/api';
+import { useUIStore } from './uiStore';
+
+// Helper to get addToast outside of React
+const getAddToast = () => useUIStore.getState().addToast;
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -69,9 +73,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set((state) => ({ messages: [...state.messages, assistantMessage], isSending: false, error: null }));
       return response;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to send message';
-      console.error('Chat error:', errorMessage, error);
-      set({ error: errorMessage, isSending: false });
+      const message = error.response?.data?.detail || error.message || 'Failed to send message';
+      console.error('Chat error:', message, error);
+      set({ error: message, isSending: false });
+      getAddToast()('error', message);
       return null;
     }
   },
