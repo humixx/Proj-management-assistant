@@ -99,9 +99,7 @@ export function useDocuments(projectId?: string) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');
     }
-  }, [fetchDocuments]);
-
-  return {
+  }, [fetchDocuments]);  return {
     documents,
     isLoading,
     error,

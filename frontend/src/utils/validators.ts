@@ -89,9 +89,7 @@ export const validateEmail = (email: string): ValidationResult => {
     validators.required(email, 'Email'),
     validators.email(email, 'Email'),
   ]);
-};
-
-// Document validation
+};// Document validation
 export const validateFileName = (fileName: string): ValidationResult => {
   return validators.validate(fileName, [
     validators.required(fileName, 'File name'),
