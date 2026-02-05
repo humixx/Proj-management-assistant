@@ -43,7 +43,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await chatApi.getHistory();
-      set({ messages: response.messages.map((m) => ({ ...m, pending: false })), isLoading: false, currentProjectId: projectId });
+      set({ messages: response.messages.map((m) => ({ ...m, pending: false })) as LocalMessage[], isLoading: false, currentProjectId: projectId });
     } catch (error: any) {
       set({ error: error.response?.data?.detail || 'Failed to fetch history', isLoading: false });
     }

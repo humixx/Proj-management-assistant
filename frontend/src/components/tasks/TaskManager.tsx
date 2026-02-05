@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { Task } from '@/types';
 import TaskBoard from './TaskBoard';
 import TaskFilters from './TaskFilters';
 import TaskModal from './TaskModal';
-import { Task } from './TaskCard';
 
 interface TaskManagerProps {
   projectId: string;
@@ -54,7 +54,7 @@ export default function TaskManager({
     }
   };
 
-  const handleSaveTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleSaveTask = async (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       if (selectedTask) {
         // Update existing task
@@ -71,7 +71,7 @@ export default function TaskManager({
               ? {
                   ...task,
                   ...taskData,
-                  updatedAt: new Date(),
+                  updated_at: new Date().toISOString(),
                 }
               : task
           )
@@ -89,8 +89,8 @@ export default function TaskManager({
         const newTask: Task = {
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           ...taskData,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         };
 
         setTasks((prev) => [...prev, newTask]);
@@ -142,9 +142,7 @@ export default function TaskManager({
       />
 
       <TaskBoard
-        tasks={filteredTasks}
-        onTaskClick={handleTaskClick}
-        onAddTask={handleAddTask}
+        projectId={projectId}
       />
 
       <TaskModal

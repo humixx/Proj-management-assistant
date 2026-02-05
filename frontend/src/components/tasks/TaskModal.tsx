@@ -1,6 +1,6 @@
 'use client';
 
-import { Task } from './TaskCard';
+import { Task } from '@/types';
 import { useState, useEffect } from 'react';
 import { validateTaskTitle, validateTaskDescription } from '@/utils/validators';
 import FormField from '@/components/ui/FormField';
@@ -8,7 +8,7 @@ import FormField from '@/components/ui/FormField';
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSave: (task: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => void;
   task?: Task;
   projectId: string;
 }
@@ -26,7 +26,10 @@ export default function TaskModal({
     status: 'todo' as Task['status'],
     priority: 'medium' as Task['priority'],
     assignee: '',
-    dueDate: '',
+    due_date: '',
+    project_id: projectId,
+    parent_task_id: null as string | null,
+    tags: [] as string[] | null,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -39,8 +42,11 @@ export default function TaskModal({
         status: task.status,
         priority: task.priority || 'medium',
         assignee: task.assignee || '',
-        dueDate: task.dueDate
-          ? new Date(task.dueDate).toISOString().split('T')[0]
+        project_id: task.project_id,
+        parent_task_id: task.parent_task_id,
+        tags: task.tags,
+        due_date: task.due_date
+          ? new Date(task.due_date).toISOString().split('T')[0]
           : '',
       });
     } else {
@@ -50,10 +56,13 @@ export default function TaskModal({
         status: 'todo',
         priority: 'medium',
         assignee: '',
-        dueDate: '',
+        due_date: '',
+        project_id: projectId,
+        parent_task_id: null,
+        tags: null,
       });
     }
-  }, [task, isOpen]);
+  }, [task, isOpen, projectId]);
 
   if (!isOpen) return null;
 
@@ -80,7 +89,7 @@ export default function TaskModal({
     setErrors({});
     onSave({
       ...formData,
-      dueDate: formData.dueDate ? new Date(formData.dueDate) : undefined,
+      due_date: formData.due_date ? formData.due_date : null,
     });
     onClose();
   };
@@ -196,9 +205,9 @@ export default function TaskModal({
                     </label>
                     <input
                       type="date"
-                      value={formData.dueDate}
+                      value={formData.due_date}
                       onChange={(e) =>
-                        setFormData({ ...formData, dueDate: e.target.value })
+                        setFormData({ ...formData, due_date: e.target.value })
                       }
                       className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />

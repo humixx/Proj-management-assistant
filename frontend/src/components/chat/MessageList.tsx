@@ -1,14 +1,8 @@
 import MessageBubble from './MessageBubble';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
+import { LocalMessage } from '@/types';
 
 interface MessageListProps {
-  messages: Message[];
+  messages: LocalMessage[];
 }
 
 export default function MessageList({ messages }: MessageListProps) {
@@ -43,10 +37,7 @@ export default function MessageList({ messages }: MessageListProps) {
       {messages.map((message) => (
         <MessageBubble
           key={message.id}
-          id={message.id}
-          role={message.role}
-          content={message.content}
-          timestamp={message.timestamp}
+          message={message}
         />
       ))}
     </div>
