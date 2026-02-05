@@ -1,72 +1,41 @@
-# FastAPI entry point
-import os
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from app.config import settings
+# Environment configuration
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Application lifespan context manager.
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables."""
     
-    Handles startup and shutdown events.
-    """
-    # Startup
-    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    print("Starting up...")
+    # Server
+    host: str
+    port: int
+    environment: str
+
+    # Database
+    DATABASE_URL: str
+    REDIS_URL: str
     
-    yield
+    # API Keys
+    VOYAGE_API_KEY: str
+    ANTHROPIC_API_KEY: str
     
-    # Shutdown
-    print("Shutting down...")
-
-
-# Create FastAPI application
-app = FastAPI(
-    title="Project Management Assistant",
-    version="1.0.0",
-    lifespan=lifespan
-)
-
-# Add CORS middleware (for development)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.get("/health")
-async def health_check() -> dict:
-    """
-    Health check endpoint.
+    # Slack Integration
+    SLACK_CLIENT_ID: str = ""
+    SLACK_CLIENT_SECRET: str = ""
     
-    Returns:
-        dict: Health status and version information
-    """
-    return {
-        "status": "healthy",
-        "version": "1.0.0"
-    }
+    # File Upload
+    UPLOAD_DIR: str = "./uploads"
+    
+    # Document Processing
+    CHUNK_SIZE: int = 512
+    CHUNK_OVERLAP: int = 50
+    
+    # Vector Search
+    EMBEDDING_DIMENSION: int = 1024
+    TOP_K_RESULTS: int = 5
+    SIMILARITY_THRESHOLD: float = 0.3
+    
+    model_config = SettingsConfigDict(env_file=".env")
 
 
-# Include routers
-from app.api.routes import projects, tasks, documents, chat
-
-app.include_router(projects.router, prefix="/projects", tags=["projects"])
-app.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
-app.include_router(documents.router, prefix="/documents", tags=["documents"])
-app.include_router(chat.router, prefix="/chat", tags=["chat"])
-
-# Additional routers (commented out for now, will add as we implement)
-# from app.api.routes import teams, integrations
-# app.include_router(teams.router, prefix="/teams", tags=["teams"])
-# app.include_router(integrations.router, prefix="/integrations", tags=["integrations"])
-
+# Singleton instance
+settings = Settings()
