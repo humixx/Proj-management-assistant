@@ -1,41 +1,69 @@
-# Environment configuration
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.config import settings
 
 
-class Settings(BaseSettings):
-    """Application settings loaded from environment variables."""
-    
-    # Server
-    host: str
-    port: int
-    environment: str
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Application lifespan context manager."""
+    # Startup
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    print("Starting up...")
 
-    # Database
-    DATABASE_URL: str
-    REDIS_URL: str
-    
-    # API Keys
-    VOYAGE_API_KEY: str
-    ANTHROPIC_API_KEY: str
-    
-    # Slack Integration
-    SLACK_CLIENT_ID: str = ""
-    SLACK_CLIENT_SECRET: str = ""
-    
-    # File Upload
-    UPLOAD_DIR: str = "./uploads"
-    
-    # Document Processing
-    CHUNK_SIZE: int = 512
-    CHUNK_OVERLAP: int = 50
-    
-    # Vector Search
-    EMBEDDING_DIMENSION: int = 1024
-    TOP_K_RESULTS: int = 5
-    SIMILARITY_THRESHOLD: float = 0.3
-    
-    model_config = SettingsConfigDict(env_file=".env")
+    yield
+
+    # Shutdown
+    print("Shutting down...")
 
 
-# Singleton instance
-settings = Settings()
+# Create FastAPI application
+app = FastAPI(
+    title="Project Management Assistant",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health")
+async def health_check() -> dict:
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "version": "1.0.0",
+    }
+
+
+# Include routers
+from app.api.routes import projects, tasks, documents, chat
+
+app.include_router(projects.router, prefix="/projects", tags=["projects"])
+app.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+app.include_router(documents.router, prefix="/documents", tags=["documents"])
+app.include_router(chat.router, prefix="/chat", tags=["chat"])
+
+
+@app.get("/healthz")
+async def healthz() -> dict:
+    """Extended health check with environment info."""
+    return {"status": "ok", "environment": settings.environment}
+
+# Additional routers (commented out for now, will add as we implement)
+# from app.api.routes import teams, integrations
+# app.include_router(teams.router, prefix="/teams", tags=["teams"])
+# app.include_router(integrations.router, prefix="/integrations", tags=["integrations"])
+
