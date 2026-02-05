@@ -1,0 +1,37 @@
+name: Run Tests
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  test:
+    name: Quick Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Check backend syntax
+        working-directory: ./backend
+        run: |
+          pip install pyflakes
+          pyflakes app/ || true
+          
+      - name: Check frontend build
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
