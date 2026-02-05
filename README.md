@@ -1,6 +1,6 @@
 # Project Management Assistant
 
-A comprehensive project management assistant with AI-powered chat, task management, document processing, and Slack integration.
+A comprehensive project management assistant with AI-powered chat, task management, document processing, and Slack integration (coming soon).
 
 ## 🚀 Quick Start
 
