@@ -1,7 +1,9 @@
 """Chat API routes."""
+import json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_current_project_id
@@ -53,6 +55,47 @@ async def send_message(
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent error: {str(e)}")
+
+
+@router.post("/stream")
+async def send_message_stream(
+    data: ChatRequest,
+    project_id: UUID = Depends(get_current_project_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Send a message to the AI agent with SSE streaming for live progress.
+    
+    Emits events:
+      - {"type": "thinking", "stage": "analyzing"}
+      - {"type": "tool_start", "tool_name": "create_task", "arguments": {...}}
+      - {"type": "tool_end", "tool_name": "create_task", "result": {...}}
+      - {"type": "response", "message": "...", "tool_calls": [...]}
+      - {"type": "error", "message": "..."}
+    """
+    async def event_stream():
+        try:
+            agent = Agent(db, project_id)
+            
+            # Emit initial thinking stage
+            yield f"data: {json.dumps({'type': 'thinking', 'stage': 'analyzing'})}\n\n"
+            
+            async for event in agent.run_streaming(data.message):
+                yield f"data: {json.dumps(event)}\n\n"
+            
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/history", response_model=ChatHistoryResponse)

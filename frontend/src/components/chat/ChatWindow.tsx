@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useChatStore, useTaskStore } from '@/lib/stores';
 import ChatInput from './ChatInput';
 import MessageBubble from './MessageBubble';
+import ThinkingIndicator from './ThinkingIndicator';
 import { NoChatEmpty } from '@/components/ui/EmptyState';
 
 interface ChatWindowProps {
@@ -11,7 +12,7 @@ interface ChatWindowProps {
 }
 
 export default function ChatWindow({ projectId }: ChatWindowProps) {
-  const { messages, isLoading, isSending, error, fetchHistory, sendMessage, clearError } = useChatStore();
+  const { messages, isLoading, isSending, error, fetchHistory, sendMessageStreaming, clearError } = useChatStore();
   const { fetchTasks } = useTaskStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -35,14 +36,13 @@ export default function ChatWindow({ projectId }: ChatWindowProps) {
 
   const handleSendMessage = async (content: string) => {
     try {
-      const response = await sendMessage(content);
+      const response = await sendMessageStreaming(content);
       // Refresh tasks if agent used task tools
       if (response?.tool_calls?.some((tc) => ['create_task', 'bulk_create_tasks'].includes(tc.tool_name))) {
         await fetchTasks();
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      // Error is already handled in the store
     }
   };
 
@@ -70,11 +70,7 @@ export default function ChatWindow({ projectId }: ChatWindowProps) {
             {messages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
-            {isSending && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-lg px-4 py-3 text-gray-700 font-medium">Thinking...</div>
-              </div>
-            )}
+            {isSending && <ThinkingIndicator />}
             <div ref={messagesEndRef} />
           </div>
         )}

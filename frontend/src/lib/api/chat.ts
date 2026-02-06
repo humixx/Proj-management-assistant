@@ -1,6 +1,17 @@
 import apiClient from './client';
 import { ChatRequest, ChatResponse, ChatHistoryResponse } from '@/types';
 
+export interface StreamEvent {
+  type: 'thinking' | 'tool_start' | 'tool_end' | 'response' | 'error' | 'done';
+  stage?: string;
+  iteration?: number;
+  tool_name?: string;
+  arguments?: Record<string, any>;
+  result?: any;
+  message?: string;
+  tool_calls?: any[];
+}
+
 export const chatApi = {
   sendMessage: async (message: string): Promise<ChatResponse> => {
     const data: ChatRequest = { message, include_context: true };
@@ -9,6 +20,52 @@ export const chatApi = {
     });
     return response.data;
   },
+
+  sendMessageStreaming: async function* (message: string): AsyncGenerator<StreamEvent> {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const projectId = localStorage.getItem('currentProjectId');
+
+    const response = await fetch(`${baseUrl}/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(projectId ? { 'X-Project-ID': projectId } : {}),
+      },
+      body: JSON.stringify({ message, include_context: true }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Stream request failed: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data: ')) {
+          try {
+            const event: StreamEvent = JSON.parse(trimmed.slice(6));
+            yield event;
+          } catch {
+            // skip malformed lines
+          }
+        }
+      }
+    }
+  },
+
   getHistory: async (limit = 50): Promise<ChatHistoryResponse> => {
     const response = await apiClient.get<ChatHistoryResponse>('/chat/history', { params: { limit } });
     return response.data;
