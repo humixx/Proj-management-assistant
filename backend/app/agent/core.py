@@ -1,5 +1,6 @@
 """Main agent implementation."""
-from typing import Any, Optional
+import json
+from typing import Any, AsyncGenerator, Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -145,7 +146,6 @@ class Agent:
             # Add tool results
             tool_result_content = []
             for tr in tool_results:
-                import json
                 tool_result_content.append({
                     "type": "tool_result",
                     "tool_use_id": tr["tool_use_id"],
@@ -156,6 +156,137 @@ class Agent:
         
         # Max iterations reached
         return {
+            "message": "I apologize, but I wasn't able to complete the request. Please try again.",
+            "tool_calls": all_tool_calls if all_tool_calls else None,
+        }
+    
+    async def run_streaming(self, user_message: str) -> AsyncGenerator[dict, None]:
+        """
+        Process a user message and yield progress events as they happen.
+        
+        Yields dicts like:
+          {"type": "thinking", "stage": "calling_llm"}
+          {"type": "tool_start", "tool_name": "create_task", "arguments": {...}}
+          {"type": "tool_end", "tool_name": "create_task", "result": {...}}
+          {"type": "response", "message": "...", "tool_calls": [...]}
+        """
+        # Save user message
+        await self.memory.save_message(role="user", content=user_message)
+        
+        # Get chat history for context
+        history = await self.memory.get_chat_history(limit=10)
+        
+        # Build messages for LLM
+        messages = history.copy()
+        if not messages or messages[-1]["content"] != user_message:
+            messages.append({"role": "user", "content": user_message})
+        
+        # Get tool definitions
+        tool_definitions = self.tools.get_tool_definitions()
+        
+        # Track tool calls for response
+        all_tool_calls = []
+        
+        max_iterations = 10
+        iteration = 0
+        
+        while iteration < max_iterations:
+            iteration += 1
+            
+            yield {"type": "thinking", "stage": "calling_llm", "iteration": iteration}
+            
+            # Call LLM
+            response = await llm_service.chat(
+                messages=messages,
+                system_prompt=self.system_prompt,
+                tools=tool_definitions,
+            )
+            
+            # If no tool calls, we have our final response
+            if not response["tool_calls"]:
+                final_message = response["content"]
+                
+                await self.memory.save_message(
+                    role="assistant",
+                    content=final_message,
+                    tool_calls={"calls": all_tool_calls} if all_tool_calls else None,
+                )
+                
+                yield {
+                    "type": "response",
+                    "message": final_message,
+                    "tool_calls": all_tool_calls if all_tool_calls else None,
+                }
+                return
+            
+            # Process tool calls
+            tool_results = []
+            for tool_call in response["tool_calls"]:
+                tool_name = tool_call["name"]
+                tool_args = tool_call["arguments"]
+                
+                # Emit tool_start
+                yield {
+                    "type": "tool_start",
+                    "tool_name": tool_name,
+                    "arguments": tool_args,
+                }
+                
+                # Execute tool
+                tool = self.tools.get(tool_name)
+                if tool:
+                    try:
+                        result = await tool.execute(**tool_args)
+                    except Exception as e:
+                        result = {"error": str(e)}
+                else:
+                    result = {"error": f"Unknown tool: {tool_name}"}
+                
+                # Emit tool_end
+                yield {
+                    "type": "tool_end",
+                    "tool_name": tool_name,
+                    "result": result,
+                }
+                
+                tool_results.append({
+                    "tool_use_id": tool_call["id"],
+                    "result": result,
+                })
+                
+                all_tool_calls.append({
+                    "tool_name": tool_name,
+                    "arguments": tool_args,
+                    "result": result,
+                })
+            
+            # Add assistant message with tool use to history
+            assistant_content = []
+            if response["content"]:
+                assistant_content.append({"type": "text", "text": response["content"]})
+            for tc in response["tool_calls"]:
+                assistant_content.append({
+                    "type": "tool_use",
+                    "id": tc["id"],
+                    "name": tc["name"],
+                    "input": tc["arguments"],
+                })
+            
+            messages.append({"role": "assistant", "content": assistant_content})
+            
+            tool_result_content = []
+            for tr in tool_results:
+                tool_result_content.append({
+                    "type": "tool_result",
+                    "tool_use_id": tr["tool_use_id"],
+                    "content": json.dumps(tr["result"]),
+                })
+            
+            messages.append({"role": "user", "content": tool_result_content})
+        
+        # Max iterations reached
+        yield {
+            "type": "response",
             "message": "I apologize, but I wasn't able to complete the request. Please try again.",
             "tool_calls": all_tool_calls if all_tool_calls else None,
         }
