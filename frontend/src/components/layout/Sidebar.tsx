@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useProjectStore } from '@/lib/stores';
+import { useProjectStore, useAuthStore } from '@/lib/stores';
 import { Project } from '@/types';
 import { validateProjectName } from '@/utils/validators';
 
@@ -11,6 +11,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { projects, currentProject, isLoading, fetchProjects, selectProject, createProject } = useProjectStore();
+  const { user, logout } = useAuthStore();
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [nameError, setNameError] = useState('');
@@ -185,10 +186,25 @@ export default function Sidebar() {
         )}
       </div>
 
-      <div className="p-4 border-t border-gray-700">
+      <div className="p-4 border-t border-gray-700 space-y-2">
         <Link href="/settings" className="block px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 rounded-md">
           Settings
         </Link>
+        {user && (
+          <div className="px-3 py-2">
+            <p className="text-sm font-medium text-white truncate">{user.name}</p>
+            <p className="text-xs text-gray-400 truncate">{user.email}</p>
+            <button
+              onClick={() => {
+                logout();
+                router.push('/login');
+              }}
+              className="mt-2 w-full px-3 py-1.5 text-xs text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
       </div>
     </aside>
     </>

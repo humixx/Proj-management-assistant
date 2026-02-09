@@ -8,8 +8,23 @@ const apiClient: AxiosInstance = axios.create({
   timeout: 30000,
 });
 
-// Add project ID header to all requests
+// Add auth token and project ID headers to all requests
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  // Auth token
+  try {
+    const authStore = localStorage.getItem('auth-store');
+    if (authStore) {
+      const parsed = JSON.parse(authStore);
+      const token = parsed?.state?.token;
+      if (token && config.headers) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+
+  // Project ID
   const projectId = localStorage.getItem('currentProjectId');
   if (projectId && config.headers) {
     config.headers['X-Project-ID'] = projectId;
@@ -17,12 +32,24 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// Error handling
+// Error handling with 401 auto-logout
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     const data = error.response?.data as any;
     console.error('API Error:', data?.detail || error.message);
+
+    // Auto-logout on 401 (skip for auth endpoints to avoid loop)
+    if (error.response?.status === 401 && !error.config?.url?.startsWith('/auth/')) {
+      // Clear auth state
+      localStorage.removeItem('auth-store');
+      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      // Redirect to login
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
+
     return Promise.reject(error);
   }
 );

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useProjectStore } from '@/lib/stores';
+import { useRouter } from 'next/navigation';
+import { useProjectStore, useAuthStore, useNotesStore } from '@/lib/stores';
 import { Task, Document } from '@/types';
 import apiClient from '@/lib/api/client';
 
@@ -16,7 +17,10 @@ interface ActivityItem {
 }
 
 export default function Home() {
+  const router = useRouter();
   const { projects, fetchProjects } = useProjectStore();
+  const { user, logout } = useAuthStore();
+  const { notes, setNotes } = useNotesStore();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [teamMemberCount, setTeamMemberCount] = useState(0);
@@ -122,13 +126,27 @@ export default function Home() {
       {/* Dashboard Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Welcome Section */}
-        <div className="mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
-            Welcome Back
-          </h2>
-          <p className="text-base sm:text-lg text-gray-700">
-            Your AI-powered project management dashboard
-          </p>
+        <div className="mb-6 sm:mb-8 flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+              Welcome Back{user?.name ? `, ${user.name}` : ''}
+            </h2>
+            <p className="text-base sm:text-lg text-gray-700">
+              Your AI-powered project management dashboard
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              logout();
+              router.push('/login');
+            }}
+            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign out
+          </button>
         </div>
 
         {/* Stats Grid */}
@@ -297,6 +315,20 @@ export default function Home() {
               </div>
             </Link>
           </div>
+        </div>
+
+        {/* Quick Notes */}
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">Quick Notes</h3>
+            <span className="text-xs text-gray-400">Session only — cleared on logout</span>
+          </div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Jot down your thoughts..."
+            className="w-full min-h-[120px] px-3 py-2 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+          />
         </div>
 
         {/* Recent Activity Section */}
