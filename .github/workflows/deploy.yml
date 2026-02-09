@@ -33,35 +33,6 @@ jobs:
   # ==========================================
   # Deploy to EC2
   # ==========================================
-  name: Deploy to EC2
-
-on:
-  push:
-    branches: [master]
-  workflow_dispatch:
-
-jobs:
-  build:
-    name: Build & Test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Build Frontend
-        working-directory: ./frontend
-        run: |
-          npm ci
-          npm run build
-        env:
-          NEXT_PUBLIC_API_URL: http://54.209.95.229:8000
-
   deploy:
     name: Deploy to EC2
     needs: build
@@ -77,32 +48,24 @@ jobs:
           command_timeout: 30m
           script: |
             set -e
-            
             echo "📁 Navigating to project directory..."
             cd /var/www/Proj-management-assistant
-            
             echo "📥 Pulling latest code..."
             git pull origin master
-            
             echo "🐍 Updating backend..."
             cd backend
             source venv/bin/activate
             pip install -r requirements.txt --quiet
-            
             echo "🗄️ Running migrations..."
             alembic upgrade head || echo "No new migrations"
-            
             echo "⚛️ Updating frontend..."
             cd ../frontend
             npm ci --silent
-            
             echo "🔨 Building frontend..."
             npm run build
-            
             echo "🔄 Restarting services..."
             sudo systemctl restart Proj-management-assistant-api
             sudo systemctl restart Proj-management-assistant-web
-            
             echo "✅ Deployment complete!"
 
       - name: Verify deployment
