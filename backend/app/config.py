@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     SLACK_CLIENT_ID: str = ""
     SLACK_CLIENT_SECRET: str = ""
 
+    # JWT Authentication
+    JWT_SECRET_KEY: str = "change-me-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRATION_HOURS: int = 24
+
     # File Upload
     UPLOAD_DIR: str = "./uploads"
 
@@ -34,7 +39,7 @@ class Settings(BaseSettings):
     TOP_K_RESULTS: int = 5
     SIMILARITY_THRESHOLD: float = 0.3
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 # Singleton instance

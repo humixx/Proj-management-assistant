@@ -25,11 +25,24 @@ export const chatApi = {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     const projectId = localStorage.getItem('currentProjectId');
 
+    // Get auth token from persisted store
+    let token: string | null = null;
+    try {
+      const authStore = localStorage.getItem('auth-store');
+      if (authStore) {
+        const parsed = JSON.parse(authStore);
+        token = parsed?.state?.token || null;
+      }
+    } catch {
+      // ignore parse errors
+    }
+
     const response = await fetch(`${baseUrl}/chat/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(projectId ? { 'X-Project-ID': projectId } : {}),
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({ message, include_context: true }),
     });

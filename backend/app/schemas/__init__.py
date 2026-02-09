@@ -30,6 +30,12 @@ from app.schemas.chat import (
     PlanInfo,
     PlanStep,
 )
+from app.schemas.auth import (
+    RegisterRequest,
+    LoginRequest,
+    AuthResponse,
+    UserResponse,
+)
 from app.schemas.integration import (
     SlackConnectRequest,
     SlackChannel,
@@ -67,6 +73,11 @@ __all__ = [
     "ToolCallInfo",
     "PlanInfo",
     "PlanStep",
+    # Auth
+    "RegisterRequest",
+    "LoginRequest",
+    "AuthResponse",
+    "UserResponse",
     # Integration
     "SlackConnectRequest",
     "SlackChannel",
