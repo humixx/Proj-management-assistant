@@ -43,7 +43,8 @@ export default function ChatBubble({ projectId }: ChatBubbleProps) {
   const handleSendMessage = async (content: string) => {
     try {
       const response = await sendMessageStreaming(content);
-      if (response?.tool_calls?.some((tc) => ['create_task', 'bulk_create_tasks'].includes(tc.tool_name))) {
+      const TASK_MUTATING_TOOLS = ['create_task', 'bulk_create_tasks', 'confirm_proposed_tasks', 'update_task', 'delete_task'];
+      if (response?.tool_calls?.some((tc) => TASK_MUTATING_TOOLS.includes(tc.tool_name))) {
         await fetchTasks();
       }
     } catch (err) {
