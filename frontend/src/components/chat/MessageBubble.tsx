@@ -1,6 +1,10 @@
 'use client';
 
-import { LocalMessage } from '@/types';
+import { LocalMessage, ProposedTask } from '@/types';
+import { useChatStore, useTaskStore } from '@/lib/stores';
+import TaskProposalCard from './TaskProposalCard';
+
+const TASK_MUTATING_TOOLS = ['create_task', 'bulk_create_tasks', 'confirm_proposed_tasks', 'update_task', 'delete_task'];
 
 interface MessageBubbleProps {
   message: LocalMessage;
@@ -8,15 +12,65 @@ interface MessageBubbleProps {
 
 export default function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
+  const { sendMessageStreaming, isSending } = useChatStore();
+  const { fetchTasks } = useTaskStore();
+
+  // Normalize tool_calls: from DB it can be {calls: [...]} object, from streaming it's an array
+  const toolCallsArray = Array.isArray(message.tool_calls)
+    ? message.tool_calls
+    : (message.tool_calls as any)?.calls || [];
+
+  // Check if any tool call is a proposal
+  const proposalCall = toolCallsArray.find(
+    (tc: any) => tc.tool_name === 'propose_tasks' && tc.result?.type === 'proposal'
+  );
+  const proposedTasks: ProposedTask[] | null = proposalCall?.result?.tasks || null;
+
+  const handleProposalAction = async (approvalMessage: string) => {
+    const response = await sendMessageStreaming(approvalMessage);
+    // Refresh task panel if the agent created/updated/deleted tasks
+    if (response?.tool_calls?.some((tc) => TASK_MUTATING_TOOLS.includes(tc.tool_name))) {
+      await fetchTasks();
+    }
+  };
+
+  // Clean up approval messages — hide the JSON payload from the user
+  const displayContent = isUser && message.content.startsWith('APPROVED.')
+    ? message.content.includes('only the selected')
+      ? 'Approved selected tasks.'
+      : 'Approved all tasks.'
+    : message.content;
+
+  // Non-proposal tool calls for display
+  const otherToolCalls = toolCallsArray.filter(
+    (tc: any) => !(tc.tool_name === 'propose_tasks' && tc.result?.type === 'proposal'),
+  );
+
+  // If the assistant message has no text content but has tool results,
+  // build a summary from the tool results so the user sees something meaningful.
+  const hasContent = displayContent && displayContent.trim().length > 0;
+  const showToolSummary = !isUser && !hasContent && otherToolCalls.length > 0;
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-[80%] rounded-lg px-4 py-3 ${isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
-        <div className="whitespace-pre-wrap text-base leading-relaxed">{message.content}</div>
+        {hasContent && (
+          <div className="whitespace-pre-wrap text-base leading-relaxed">{displayContent}</div>
+        )}
 
-        {message.tool_calls && message.tool_calls.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {message.tool_calls.map((tc, i) => (
+        {/* Render proposal card if this message contains a propose_tasks tool call */}
+        {proposedTasks && proposedTasks.length > 0 && (
+          <TaskProposalCard
+            tasks={proposedTasks}
+            onApprove={handleProposalAction}
+            disabled={isSending}
+          />
+        )}
+
+        {/* Render non-proposal tool calls */}
+        {otherToolCalls.length > 0 && (
+          <div className={hasContent ? 'mt-2 space-y-1' : 'space-y-1'}>
+            {otherToolCalls.map((tc: any, i: number) => (
               <div key={i} className="bg-white rounded p-2 text-xs text-gray-700 border">
                 <span className="font-semibold">{tc.tool_name}</span>
                 {tc.result?.message && <span className="ml-2 text-gray-600">{tc.result.message}</span>}

@@ -3,9 +3,13 @@ import { LocalMessage, ChatResponse } from '@/types';
 import { chatApi, StreamEvent } from '@/lib/api/chat';
 import { getCurrentProjectId } from '@/lib/api';
 import { useUIStore } from './uiStore';
+import { useTaskStore } from './taskStore';
 
 // Helper to get addToast outside of React
 const getAddToast = () => useUIStore.getState().addToast;
+
+// Tools that change task data — trigger live refresh on tool_end
+const TASK_MUTATING_TOOLS = ['create_task', 'bulk_create_tasks', 'confirm_proposed_tasks', 'update_task', 'delete_task'];
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -15,10 +19,14 @@ const TOOL_LABELS: Record<string, string> = {
   bulk_create_tasks: 'Creating tasks',
   list_tasks: 'Fetching tasks',
   search_documents: 'Searching documents',
+  propose_tasks: 'Proposing tasks',
+  confirm_proposed_tasks: 'Creating approved tasks',
+  update_task: 'Updating task',
+  delete_task: 'Deleting task',
 };
 
 export interface AgentStatus {
-  stage: 'idle' | 'analyzing' | 'calling_llm' | 'tool_running' | 'tool_done' | 'responding';
+  stage: 'idle' | 'analyzing' | 'calling_llm' | 'tool_running' | 'tool_done' | 'composing' | 'responding';
   label: string;
   toolName?: string;
   toolArgs?: Record<string, any>;
@@ -124,16 +132,34 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       for await (const event of chatApi.sendMessageStreaming(content)) {
         switch (event.type) {
-          case 'thinking':
+          case 'thinking': {
+            let label: string;
+            if (event.iteration && event.iteration > 1) {
+              // After a tool ran — describe what the agent is doing next
+              const lastTool = event.last_tool;
+              if (lastTool === 'list_tasks') {
+                label = 'Reviewing task list...';
+              } else if (lastTool === 'search_documents') {
+                label = 'Analyzing search results...';
+              } else if (lastTool === 'propose_tasks') {
+                label = 'Preparing proposal...';
+              } else if (lastTool === 'confirm_proposed_tasks') {
+                label = 'Summarizing created tasks...';
+              } else if (lastTool === 'update_task') {
+                label = 'Confirming changes...';
+              } else if (lastTool === 'delete_task') {
+                label = 'Confirming deletion...';
+              } else {
+                label = 'Processing next step...';
+              }
+            } else {
+              label = 'Thinking...';
+            }
             set({
-              agentStatus: {
-                stage: 'calling_llm',
-                label: event.iteration && event.iteration > 1
-                  ? 'Processing next step...'
-                  : 'Understanding your request...',
-              },
+              agentStatus: { stage: 'calling_llm', label },
             });
             break;
+          }
 
           case 'tool_start':
             set({
@@ -146,6 +172,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
             });
             break;
 
+          case 'task_created':
+            // Live-refresh after each individual task is created
+            set({
+              agentStatus: {
+                stage: 'tool_running',
+                label: event.progress
+                  ? `Creating tasks (${event.progress.current}/${event.progress.total})...`
+                  : `Created "${event.task?.title}"`,
+                toolName: event.tool_name,
+              },
+            });
+            useTaskStore.getState().fetchTasks();
+            break;
+
           case 'tool_end':
             set({
               agentStatus: {
@@ -153,6 +193,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 label: `${TOOL_LABELS[event.tool_name || ''] || event.tool_name} complete`,
                 toolName: event.tool_name,
                 toolResult: event.result,
+              },
+            });
+            // Live-refresh task board when a task-mutating tool completes
+            if (event.tool_name && TASK_MUTATING_TOOLS.includes(event.tool_name)) {
+              useTaskStore.getState().fetchTasks();
+            }
+            break;
+
+          case 'composing':
+            set({
+              agentStatus: {
+                stage: 'composing',
+                label: 'Writing response...',
               },
             });
             break;

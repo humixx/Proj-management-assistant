@@ -7,6 +7,10 @@ const STAGE_CONFIG: Record<string, { icon: string; color: string }> = {
   bulk_create_tasks: { icon: '📋', color: 'bg-green-500' },
   list_tasks: { icon: '📄', color: 'bg-blue-500' },
   search_documents: { icon: '🔍', color: 'bg-purple-500' },
+  propose_tasks: { icon: '📝', color: 'bg-yellow-500' },
+  confirm_proposed_tasks: { icon: '✅', color: 'bg-green-500' },
+  update_task: { icon: '✏️', color: 'bg-blue-500' },
+  delete_task: { icon: '🗑️', color: 'bg-red-500' },
 };
 
 const FALLBACK_STAGES: Record<AgentStatus['stage'], { icon: string; color: string }> = {
@@ -15,6 +19,7 @@ const FALLBACK_STAGES: Record<AgentStatus['stage'], { icon: string; color: strin
   calling_llm: { icon: '🧠', color: 'bg-indigo-500' },
   tool_running: { icon: '⚙️', color: 'bg-amber-500' },
   tool_done: { icon: '✅', color: 'bg-green-500' },
+  composing: { icon: '✍️', color: 'bg-teal-500' },
   responding: { icon: '💬', color: 'bg-blue-500' },
 };
 
@@ -40,6 +45,15 @@ export default function ThinkingIndicator({ status: statusProp, compact = false 
       detail = `"${status.toolArgs.title}"`;
     } else if (status.toolName === 'bulk_create_tasks' && status.toolArgs.tasks) {
       detail = `${status.toolArgs.tasks.length} tasks`;
+    } else if (status.toolName === 'propose_tasks' && status.toolArgs.tasks) {
+      detail = `${status.toolArgs.tasks.length} task(s)`;
+    } else if (status.toolName === 'confirm_proposed_tasks' && status.toolArgs.tasks) {
+      detail = `${status.toolArgs.tasks.length} task(s)`;
+    } else if (status.toolName === 'update_task' && status.toolArgs.task_id) {
+      const changes = ['status', 'priority', 'title', 'assignee'].filter((k) => status.toolArgs?.[k]).join(', ');
+      detail = changes || 'updating';
+    } else if (status.toolName === 'delete_task') {
+      detail = 'removing task';
     } else if (status.toolName === 'search_documents' && status.toolArgs.query) {
       detail = `"${status.toolArgs.query}"`;
     } else if (status.toolName === 'list_tasks') {
@@ -48,7 +62,13 @@ export default function ThinkingIndicator({ status: statusProp, compact = false 
     }
   }
   if (status.stage === 'tool_done' && status.toolResult) {
-    if (status.toolResult.count) {
+    if (status.toolName === 'propose_tasks' && status.toolResult.tasks?.length) {
+      detail = `${status.toolResult.tasks.length} proposed`;
+    } else if (status.toolName === 'update_task' && status.toolResult.task?.title) {
+      detail = `"${status.toolResult.task.title}"`;
+    } else if (status.toolName === 'delete_task' && status.toolResult.message) {
+      detail = 'removed';
+    } else if (status.toolResult.count) {
       detail = `${status.toolResult.count} created`;
     } else if (status.toolResult.task?.title) {
       detail = `"${status.toolResult.task.title}"`;

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_db, get_current_project_id, verify_project_ownership
 from app.auth.deps import get_current_user
 from app.agent.core import Agent
+from app.db.database import async_session_maker
 from app.db.models.user import User
 from app.db.repositories import ChatRepository
 from app.schemas import (
@@ -79,21 +80,27 @@ async def send_message_stream(
       - {"type": "response", "message": "...", "tool_calls": [...]}
       - {"type": "error", "message": "..."}
     """
+    # Verify ownership using the request-scoped session (still valid here)
     await verify_project_ownership(project_id, current_user.id, db)
 
     async def event_stream():
-        try:
-            agent = Agent(db, project_id)
+        # Create a NEW session inside the generator so it stays alive
+        # for the entire stream duration (the Depends(get_db) session
+        # gets closed when the endpoint function returns, before
+        # streaming actually begins).
+        async with async_session_maker() as stream_db:
+            try:
+                agent = Agent(stream_db, project_id)
 
-            # Emit initial thinking stage
-            yield f"data: {json.dumps({'type': 'thinking', 'stage': 'analyzing'})}\n\n"
+                # Emit initial thinking stage
+                yield f"data: {json.dumps({'type': 'thinking', 'stage': 'analyzing'})}\n\n"
 
-            async for event in agent.run_streaming(data.message):
-                yield f"data: {json.dumps(event)}\n\n"
+                async for event in agent.run_streaming(data.message):
+                    yield f"data: {json.dumps(event)}\n\n"
 
-            yield f"data: {json.dumps({'type': 'done'})}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(
         event_stream(),

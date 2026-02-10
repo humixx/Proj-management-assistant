@@ -10,9 +10,11 @@ from app.agent.prompts import get_system_prompt
 from app.agent.tools import (
     ToolRegistry,
     SearchDocumentsTool,
-    CreateTaskTool,
-    BulkCreateTasksTool,
     ListTasksTool,
+    ProposeTasksTool,
+    ConfirmProposedTasksTool,
+    UpdateTaskTool,
+    DeleteTaskTool,
 )
 from app.services.llm_service import llm_service
 
@@ -40,9 +42,11 @@ class Agent:
     def _register_tools(self) -> None:
         """Register all available tools."""
         self.tools.register(SearchDocumentsTool(self.db, self.project_id))
-        self.tools.register(CreateTaskTool(self.db, self.project_id))
-        self.tools.register(BulkCreateTasksTool(self.db, self.project_id))
         self.tools.register(ListTasksTool(self.db, self.project_id))
+        self.tools.register(ProposeTasksTool(self.db, self.project_id))
+        self.tools.register(ConfirmProposedTasksTool(self.db, self.project_id))
+        self.tools.register(UpdateTaskTool(self.db, self.project_id))
+        self.tools.register(DeleteTaskTool(self.db, self.project_id))
     
     async def run(self, user_message: str) -> dict:
         """
@@ -189,71 +193,92 @@ class Agent:
         
         max_iterations = 10
         iteration = 0
-        
+
         while iteration < max_iterations:
             iteration += 1
-            
-            yield {"type": "thinking", "stage": "calling_llm", "iteration": iteration}
-            
+
+            # Tell the frontend we're calling the LLM — include context
+            # about what happened so far so labels can be more specific.
+            yield {
+                "type": "thinking",
+                "stage": "calling_llm",
+                "iteration": iteration,
+                "has_tool_calls": len(all_tool_calls) > 0,
+                "last_tool": all_tool_calls[-1]["tool_name"] if all_tool_calls else None,
+            }
+
             # Call LLM
             response = await llm_service.chat(
                 messages=messages,
                 system_prompt=self.system_prompt,
                 tools=tool_definitions,
             )
-            
+
             # If no tool calls, we have our final response
             if not response["tool_calls"]:
                 final_message = response["content"]
-                
+
+                # Let the frontend know we're composing the final reply
+                if all_tool_calls:
+                    yield {"type": "composing"}
+
                 await self.memory.save_message(
                     role="assistant",
                     content=final_message,
                     tool_calls={"calls": all_tool_calls} if all_tool_calls else None,
                 )
-                
+
                 yield {
                     "type": "response",
                     "message": final_message,
                     "tool_calls": all_tool_calls if all_tool_calls else None,
                 }
                 return
-            
+
             # Process tool calls
             tool_results = []
             for tool_call in response["tool_calls"]:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["arguments"]
-                
+
                 # Emit tool_start
                 yield {
                     "type": "tool_start",
                     "tool_name": tool_name,
                     "arguments": tool_args,
                 }
-                
-                # Execute tool
+
+                # Execute tool — use streaming path when available
                 tool = self.tools.get(tool_name)
+                result = None
                 if tool:
                     try:
-                        result = await tool.execute(**tool_args)
+                        if tool.supports_streaming:
+                            async for event in tool.execute_streaming(**tool_args):
+                                if event["type"] == "result":
+                                    result = event["data"]
+                                else:
+                                    # Forward intermediate events (e.g. task_created)
+                                    yield {**event, "tool_name": tool_name}
+                        else:
+                            result = await tool.execute(**tool_args)
                     except Exception as e:
                         result = {"error": str(e)}
                 else:
                     result = {"error": f"Unknown tool: {tool_name}"}
-                
+
                 # Emit tool_end
                 yield {
                     "type": "tool_end",
                     "tool_name": tool_name,
                     "result": result,
                 }
-                
+
                 tool_results.append({
                     "tool_use_id": tool_call["id"],
                     "result": result,
                 })
-                
+
                 all_tool_calls.append({
                     "tool_name": tool_name,
                     "arguments": tool_args,

@@ -2,14 +2,18 @@ import apiClient from './client';
 import { ChatRequest, ChatResponse, ChatHistoryResponse } from '@/types';
 
 export interface StreamEvent {
-  type: 'thinking' | 'tool_start' | 'tool_end' | 'response' | 'error' | 'done';
+  type: 'thinking' | 'tool_start' | 'tool_end' | 'task_created' | 'composing' | 'response' | 'error' | 'done';
   stage?: string;
   iteration?: number;
+  has_tool_calls?: boolean;
+  last_tool?: string;
   tool_name?: string;
   arguments?: Record<string, any>;
   result?: any;
   message?: string;
   tool_calls?: any[];
+  task?: { id: string; title: string; priority: string; status: string };
+  progress?: { current: number; total: number };
 }
 
 export const chatApi = {

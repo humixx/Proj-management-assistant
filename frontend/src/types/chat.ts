@@ -43,6 +43,15 @@ export interface ChatHistoryResponse {
   total: number;
 }
 
+export interface ProposedTask {
+  temp_id: string;
+  title: string;
+  description?: string | null;
+  priority: string;
+  assignee?: string | null;
+  due_date?: string | null;
+}
+
 export interface LocalMessage {
   id: string;
   role: 'user' | 'assistant';
