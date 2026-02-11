@@ -53,7 +53,7 @@ jobs:
 
             echo "🧹 Resetting local changes..."
             git reset --hard HEAD
-            git clean -fd
+            git clean -fd -e node_modules -e backend/venv -e .next
 
             echo "📥 Pulling latest code..."
             git pull origin master
@@ -69,14 +69,11 @@ jobs:
             echo "⚛️ Updating frontend..."
             cd ../frontend
             export NODE_OPTIONS="--max-old-space-size=512"
-            npm cache clean --force
+            rm -rf node_modules .next
             npm ci --silent
 
             echo "🔨 Building frontend..."
             npm run build
-
-            echo "🧹 Cleaning up..."
-            npm cache clean --force
 
             echo "🔄 Restarting services..."
             sudo systemctl restart Proj-management-assistant-api
