@@ -120,6 +120,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       pending: false,
     };
 
+    // ID for the streaming assistant message — used to update it incrementally
+    const streamingMsgId = generateId();
+
     set((state) => ({
       messages: [...state.messages, userMessage],
       isSending: true,
@@ -128,6 +131,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     let finalResponse: ChatResponse | null = null;
+    let streamingText = '';
+    let streamingMsgAdded = false;
 
     try {
       for await (const event of chatApi.sendMessageStreaming(content)) {
@@ -135,7 +140,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
           case 'thinking': {
             let label: string;
             if (event.iteration && event.iteration > 1) {
-              // After a tool ran — describe what the agent is doing next
               const lastTool = event.last_tool;
               if (lastTool === 'list_tasks') {
                 label = 'Reviewing task list...';
@@ -155,13 +159,53 @@ export const useChatStore = create<ChatState>((set, get) => ({
             } else {
               label = 'Thinking...';
             }
+            // Reset streaming text for each new LLM call iteration
+            streamingText = '';
+            streamingMsgAdded = false;
             set({
               agentStatus: { stage: 'calling_llm', label },
             });
             break;
           }
 
+          case 'text_delta': {
+            streamingText += event.text || '';
+            if (!streamingMsgAdded) {
+              // Add a new streaming message placeholder
+              streamingMsgAdded = true;
+              const streamMsg: LocalMessage = {
+                id: streamingMsgId,
+                role: 'assistant',
+                content: streamingText,
+                created_at: new Date().toISOString(),
+                pending: true,
+              };
+              set((state) => ({
+                messages: [...state.messages, streamMsg],
+                isSending: true,
+                agentStatus: { stage: 'responding', label: '' },
+              }));
+            } else {
+              // Update existing streaming message content
+              set((state) => ({
+                messages: state.messages.map((m) =>
+                  m.id === streamingMsgId ? { ...m, content: streamingText } : m,
+                ),
+              }));
+            }
+            break;
+          }
+
           case 'tool_start':
+            // If we were streaming text, remove the streaming message
+            // (will be re-added in the final response)
+            if (streamingMsgAdded) {
+              set((state) => ({
+                messages: state.messages.filter((m) => m.id !== streamingMsgId),
+              }));
+              streamingText = '';
+              streamingMsgAdded = false;
+            }
             set({
               agentStatus: {
                 stage: 'tool_running',
@@ -173,7 +217,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
             break;
 
           case 'task_created':
-            // Live-refresh after each individual task is created
             set({
               agentStatus: {
                 stage: 'tool_running',
@@ -195,7 +238,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 toolResult: event.result,
               },
             });
-            // Live-refresh task board when a task-mutating tool completes
             if (event.tool_name && TASK_MUTATING_TOOLS.includes(event.tool_name)) {
               useTaskStore.getState().fetchTasks();
             }
@@ -220,20 +262,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
               })) || null,
             };
 
-            const assistantMessage: LocalMessage = {
-              id: generateId(),
-              role: 'assistant',
-              content: event.message || '',
-              tool_calls: finalResponse.tool_calls,
-              created_at: new Date().toISOString(),
-              pending: false,
-            };
-
-            set((state) => ({
-              messages: [...state.messages, assistantMessage],
-              isSending: false,
-              agentStatus: IDLE_STATUS,
-            }));
+            if (streamingMsgAdded) {
+              // Finalize the streaming message with full content + tool_calls
+              set((state) => ({
+                messages: state.messages.map((m) =>
+                  m.id === streamingMsgId
+                    ? { ...m, content: event.message || '', tool_calls: finalResponse!.tool_calls, pending: false }
+                    : m,
+                ),
+                isSending: false,
+                agentStatus: IDLE_STATUS,
+              }));
+            } else {
+              // No text was streamed (e.g. only tool calls), add the full message
+              const assistantMessage: LocalMessage = {
+                id: generateId(),
+                role: 'assistant',
+                content: event.message || '',
+                tool_calls: finalResponse.tool_calls,
+                created_at: new Date().toISOString(),
+                pending: false,
+              };
+              set((state) => ({
+                messages: [...state.messages, assistantMessage],
+                isSending: false,
+                agentStatus: IDLE_STATUS,
+              }));
+            }
             break;
 
           case 'error':
@@ -246,7 +301,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
             break;
 
           case 'done':
-            // Stream complete — if no response event was received, reset
             if (!finalResponse) {
               set({ isSending: false, agentStatus: IDLE_STATUS });
             }

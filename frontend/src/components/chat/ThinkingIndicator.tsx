@@ -33,7 +33,8 @@ export default function ThinkingIndicator({ status: statusProp, compact = false 
   const storeStatus = useChatStore((s) => s.agentStatus);
   const status = statusProp || storeStatus;
 
-  if (status.stage === 'idle') return null;
+  // Hide when idle or when text is actively streaming into the message bubble
+  if (status.stage === 'idle' || status.stage === 'responding') return null;
 
   const toolConfig = status.toolName ? STAGE_CONFIG[status.toolName] : null;
   const config = toolConfig || FALLBACK_STAGES[status.stage];
