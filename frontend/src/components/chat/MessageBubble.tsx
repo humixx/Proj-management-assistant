@@ -3,6 +3,7 @@
 import { LocalMessage, ProposedTask } from '@/types';
 import { useChatStore, useTaskStore } from '@/lib/stores';
 import TaskProposalCard from './TaskProposalCard';
+import MarkdownContent from './MarkdownContent';
 
 const TASK_MUTATING_TOOLS = ['create_task', 'bulk_create_tasks', 'confirm_proposed_tasks', 'update_task', 'delete_task'];
 
@@ -55,7 +56,13 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-[80%] rounded-lg px-4 py-3 ${isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
         {hasContent && (
-          <div className="whitespace-pre-wrap text-base leading-relaxed">{displayContent}</div>
+          isUser ? (
+            <div className="whitespace-pre-wrap text-base leading-relaxed">{displayContent}</div>
+          ) : (
+            <div className="text-base leading-relaxed prose-sm">
+              <MarkdownContent content={displayContent} />
+            </div>
+          )
         )}
 
         {/* Render proposal card if this message contains a propose_tasks tool call */}

@@ -207,20 +207,24 @@ class Agent:
                 "last_tool": all_tool_calls[-1]["tool_name"] if all_tool_calls else None,
             }
 
-            # Call LLM
-            response = await llm_service.chat(
+            # Call LLM with streaming — forward text deltas to the frontend
+            response = None
+            async for llm_event in llm_service.chat_streaming(
                 messages=messages,
                 system_prompt=self.system_prompt,
                 tools=tool_definitions,
-            )
+            ):
+                if llm_event["type"] == "text_delta":
+                    yield {"type": "text_delta", "text": llm_event["text"]}
+                elif llm_event["type"] == "result":
+                    response = llm_event
+
+            if response is None:
+                response = {"content": "", "tool_calls": [], "stop_reason": "error"}
 
             # If no tool calls, we have our final response
             if not response["tool_calls"]:
                 final_message = response["content"]
-
-                # Let the frontend know we're composing the final reply
-                if all_tool_calls:
-                    yield {"type": "composing"}
 
                 await self.memory.save_message(
                     role="assistant",
