@@ -51,6 +51,10 @@ jobs:
             echo "📁 Navigating to project directory..."
             cd /var/www/Proj-management-assistant
 
+            echo "🧹 Resetting local changes..."
+            git reset --hard HEAD
+            git clean -fd
+
             echo "📥 Pulling latest code..."
             git pull origin master
 
