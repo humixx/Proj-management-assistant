@@ -38,7 +38,7 @@ export default function ChatWindow({ projectId }: ChatWindowProps) {
     try {
       const response = await sendMessageStreaming(content);
       // Refresh tasks if agent used any task-mutating tools
-      const TASK_MUTATING_TOOLS = ['create_task', 'bulk_create_tasks', 'confirm_proposed_tasks', 'update_task', 'delete_task'];
+      const TASK_MUTATING_TOOLS = ['create_task', 'bulk_create_tasks', 'confirm_proposed_tasks', 'update_task', 'delete_task', 'confirm_plan'];
       if (response?.tool_calls?.some((tc) => TASK_MUTATING_TOOLS.includes(tc.tool_name))) {
         await fetchTasks();
       }

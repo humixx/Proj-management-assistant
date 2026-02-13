@@ -15,6 +15,8 @@ from app.agent.tools import (
     ConfirmProposedTasksTool,
     UpdateTaskTool,
     DeleteTaskTool,
+    ProposePlanTool,
+    ConfirmPlanTool,
 )
 from app.services.llm_service import llm_service
 
@@ -47,6 +49,8 @@ class Agent:
         self.tools.register(ConfirmProposedTasksTool(self.db, self.project_id))
         self.tools.register(UpdateTaskTool(self.db, self.project_id))
         self.tools.register(DeleteTaskTool(self.db, self.project_id))
+        self.tools.register(ProposePlanTool(self.db, self.project_id))
+        self.tools.register(ConfirmPlanTool(self.db, self.project_id))
     
     async def run(self, user_message: str) -> dict:
         """

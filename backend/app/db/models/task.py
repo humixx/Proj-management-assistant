@@ -23,6 +23,7 @@ class Task(Base):
     assignee = Column(String(255), nullable=True)
     due_date = Column(Date, nullable=True)
     tags = Column(ARRAY(String), nullable=True)
+    order = Column(Integer, nullable=True)  # Position within plan (0-indexed), null for non-plan tasks
     external_id = Column(String(255), nullable=True)  # For Slack thread ID
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

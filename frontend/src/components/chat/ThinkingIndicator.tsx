@@ -11,6 +11,8 @@ const STAGE_CONFIG: Record<string, { icon: string; color: string }> = {
   confirm_proposed_tasks: { icon: '✅', color: 'bg-green-500' },
   update_task: { icon: '✏️', color: 'bg-blue-500' },
   delete_task: { icon: '🗑️', color: 'bg-red-500' },
+  propose_plan: { icon: '🗺️', color: 'bg-indigo-500' },
+  confirm_plan: { icon: '🏗️', color: 'bg-indigo-500' },
 };
 
 const FALLBACK_STAGES: Record<AgentStatus['stage'], { icon: string; color: string }> = {
@@ -55,6 +57,10 @@ export default function ThinkingIndicator({ status: statusProp, compact = false 
       detail = changes || 'updating';
     } else if (status.toolName === 'delete_task') {
       detail = 'removing task';
+    } else if (status.toolName === 'propose_plan' && status.toolArgs.goal) {
+      detail = `"${status.toolArgs.goal}"`;
+    } else if (status.toolName === 'confirm_plan' && status.toolArgs.steps) {
+      detail = `${status.toolArgs.steps.length} step(s)`;
     } else if (status.toolName === 'search_documents' && status.toolArgs.query) {
       detail = `"${status.toolArgs.query}"`;
     } else if (status.toolName === 'list_tasks') {
@@ -63,7 +69,11 @@ export default function ThinkingIndicator({ status: statusProp, compact = false 
     }
   }
   if (status.stage === 'tool_done' && status.toolResult) {
-    if (status.toolName === 'propose_tasks' && status.toolResult.tasks?.length) {
+    if (status.toolName === 'propose_plan' && status.toolResult.steps?.length) {
+      detail = `${status.toolResult.steps.length} steps proposed`;
+    } else if (status.toolName === 'confirm_plan' && status.toolResult.steps?.length) {
+      detail = `${status.toolResult.steps.length} steps created`;
+    } else if (status.toolName === 'propose_tasks' && status.toolResult.tasks?.length) {
       detail = `${status.toolResult.tasks.length} proposed`;
     } else if (status.toolName === 'update_task' && status.toolResult.task?.title) {
       detail = `"${status.toolResult.task.title}"`;

@@ -3,9 +3,10 @@
 import { LocalMessage, ProposedTask } from '@/types';
 import { useChatStore, useTaskStore } from '@/lib/stores';
 import TaskProposalCard from './TaskProposalCard';
+import PlanCard from './PlanCard';
 import MarkdownContent from './MarkdownContent';
 
-const TASK_MUTATING_TOOLS = ['create_task', 'bulk_create_tasks', 'confirm_proposed_tasks', 'update_task', 'delete_task'];
+const TASK_MUTATING_TOOLS = ['create_task', 'bulk_create_tasks', 'confirm_proposed_tasks', 'update_task', 'delete_task', 'confirm_plan'];
 
 interface MessageBubbleProps {
   message: LocalMessage;
@@ -27,6 +28,12 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   );
   const proposedTasks: ProposedTask[] | null = proposalCall?.result?.tasks || null;
 
+  // Check if any tool call is a plan proposal
+  const planProposalCall = toolCallsArray.find(
+    (tc: any) => tc.tool_name === 'propose_plan' && tc.result?.type === 'plan_proposal'
+  );
+  const planProposal = planProposalCall?.result || null;
+
   const handleProposalAction = async (approvalMessage: string) => {
     const response = await sendMessageStreaming(approvalMessage);
     // Refresh task panel if the agent created/updated/deleted tasks
@@ -36,15 +43,22 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   };
 
   // Clean up approval messages — hide the JSON payload from the user
-  const displayContent = isUser && message.content.startsWith('APPROVED.')
-    ? message.content.includes('only the selected')
-      ? 'Approved selected tasks.'
-      : 'Approved all tasks.'
-    : message.content;
+  let displayContent = message.content;
+  if (isUser) {
+    if (message.content.startsWith('APPROVED PLAN.')) {
+      displayContent = 'Approved plan.';
+    } else if (message.content.startsWith('APPROVED.')) {
+      displayContent = message.content.includes('only the selected')
+        ? 'Approved selected tasks.'
+        : 'Approved all tasks.';
+    }
+  }
 
-  // Non-proposal tool calls for display
+  // Non-proposal tool calls for display (filter out both task proposals and plan proposals)
   const otherToolCalls = toolCallsArray.filter(
-    (tc: any) => !(tc.tool_name === 'propose_tasks' && tc.result?.type === 'proposal'),
+    (tc: any) =>
+      !(tc.tool_name === 'propose_tasks' && tc.result?.type === 'proposal') &&
+      !(tc.tool_name === 'propose_plan' && tc.result?.type === 'plan_proposal'),
   );
 
   // If the assistant message has no text content but has tool results,
@@ -69,6 +83,16 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         {proposedTasks && proposedTasks.length > 0 && (
           <TaskProposalCard
             tasks={proposedTasks}
+            onApprove={handleProposalAction}
+            disabled={isSending}
+          />
+        )}
+
+        {/* Render plan card if this message contains a propose_plan tool call */}
+        {planProposal && planProposal.steps?.length > 0 && (
+          <PlanCard
+            goal={planProposal.goal}
+            steps={planProposal.steps}
             onApprove={handleProposalAction}
             disabled={isSending}
           />

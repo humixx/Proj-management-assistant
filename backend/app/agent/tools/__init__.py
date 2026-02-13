@@ -11,6 +11,10 @@ from app.agent.tools.task_tools import (
     UpdateTaskTool,
     DeleteTaskTool,
 )
+from app.agent.tools.plan_tools import (
+    ProposePlanTool,
+    ConfirmPlanTool,
+)
 
 __all__ = [
     "BaseTool",
@@ -23,4 +27,6 @@ __all__ = [
     "ConfirmProposedTasksTool",
     "UpdateTaskTool",
     "DeleteTaskTool",
+    "ProposePlanTool",
+    "ConfirmPlanTool",
 ]

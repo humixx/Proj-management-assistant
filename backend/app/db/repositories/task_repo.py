@@ -94,6 +94,16 @@ class TaskRepository(BaseRepository):
         await self.db.refresh(task)
         return task
     
+    async def list_subtasks(self, parent_task_id: UUID) -> list[Task]:
+        """Get subtasks ordered by their order field."""
+        stmt = (
+            select(Task)
+            .where(Task.parent_task_id == parent_task_id)
+            .order_by(Task.order.asc().nullslast())
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
     async def delete(self, task_id: UUID) -> bool:
         """Delete a task."""
         task = await self.get_by_id(task_id)

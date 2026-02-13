@@ -1,7 +1,9 @@
 """Chat API routes."""
 import json
+import logging
 from uuid import UUID
 
+from anthropic import APIStatusError, APIConnectionError
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +21,22 @@ from app.schemas import (
     ChatMessageResponse,
     ToolCallInfo,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _friendly_api_error(e: Exception) -> str:
+    """Turn Anthropic API errors into user-friendly messages."""
+    if isinstance(e, APIStatusError):
+        if e.status_code == 529 or "overloaded" in str(e).lower():
+            return "Claude is temporarily overloaded. Please try again in a few seconds."
+        if e.status_code == 429:
+            return "Rate limit reached. Please wait a moment and try again."
+        if e.status_code in (500, 503):
+            return "Claude API is experiencing issues. Please try again shortly."
+    if isinstance(e, APIConnectionError):
+        return "Could not connect to Claude API. Please check your connection."
+    return f"Agent error: {str(e)}"
 
 router = APIRouter()
 
@@ -59,6 +77,11 @@ async def send_message(
             tool_calls=tool_calls,
         )
 
+    except (APIStatusError, APIConnectionError) as e:
+        msg = _friendly_api_error(e)
+        logger.warning(f"Chat API error: {e}")
+        status = e.status_code if isinstance(e, APIStatusError) else 503
+        raise HTTPException(status_code=status, detail=msg)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent error: {str(e)}")
 
@@ -99,7 +122,12 @@ async def send_message_stream(
                     yield f"data: {json.dumps(event)}\n\n"
 
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            except (APIStatusError, APIConnectionError) as e:
+                msg = _friendly_api_error(e)
+                logger.warning(f"Stream API error: {e}")
+                yield f"data: {json.dumps({'type': 'error', 'message': msg})}\n\n"
             except Exception as e:
+                logger.exception(f"Stream error: {e}")
                 yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(

@@ -9,7 +9,7 @@ import { useTaskStore } from './taskStore';
 const getAddToast = () => useUIStore.getState().addToast;
 
 // Tools that change task data — trigger live refresh on tool_end
-const TASK_MUTATING_TOOLS = ['create_task', 'bulk_create_tasks', 'confirm_proposed_tasks', 'update_task', 'delete_task'];
+const TASK_MUTATING_TOOLS = ['create_task', 'bulk_create_tasks', 'confirm_proposed_tasks', 'update_task', 'delete_task', 'confirm_plan'];
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -23,6 +23,8 @@ const TOOL_LABELS: Record<string, string> = {
   confirm_proposed_tasks: 'Creating approved tasks',
   update_task: 'Updating task',
   delete_task: 'Deleting task',
+  propose_plan: 'Creating plan',
+  confirm_plan: 'Building plan tasks',
 };
 
 export interface AgentStatus {
@@ -153,6 +155,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 label = 'Confirming changes...';
               } else if (lastTool === 'delete_task') {
                 label = 'Confirming deletion...';
+              } else if (lastTool === 'propose_plan') {
+                label = 'Preparing plan...';
+              } else if (lastTool === 'confirm_plan') {
+                label = 'Summarizing plan...';
               } else {
                 label = 'Processing next step...';
               }
@@ -224,6 +230,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
                   ? `Creating tasks (${event.progress.current}/${event.progress.total})...`
                   : `Created "${event.task?.title}"`,
                 toolName: event.tool_name,
+              },
+            });
+            useTaskStore.getState().fetchTasks();
+            break;
+
+          case 'plan_started':
+            set({
+              agentStatus: {
+                stage: 'tool_running',
+                label: `Creating plan: "${event.plan_goal}"`,
+                toolName: 'confirm_plan',
+              },
+            });
+            break;
+
+          case 'plan_step_created':
+            set({
+              agentStatus: {
+                stage: 'tool_running',
+                label: `Creating step ${event.step_number}/${event.total_steps}...`,
+                toolName: 'confirm_plan',
               },
             });
             useTaskStore.getState().fetchTasks();
