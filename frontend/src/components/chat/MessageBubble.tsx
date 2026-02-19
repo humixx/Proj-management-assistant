@@ -68,7 +68,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[80%] rounded-lg px-4 py-3 ${isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
+      <div className={`max-w-[80%] rounded-lg px-4 py-3 ${isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}>
         {hasContent && (
           isUser ? (
             <div className="whitespace-pre-wrap text-base leading-relaxed">{displayContent}</div>
@@ -102,15 +102,15 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         {otherToolCalls.length > 0 && (
           <div className={hasContent ? 'mt-2 space-y-1' : 'space-y-1'}>
             {otherToolCalls.map((tc: any, i: number) => (
-              <div key={i} className="bg-white rounded p-2 text-xs text-gray-700 border">
+              <div key={i} className="bg-white dark:bg-gray-700 rounded p-2 text-xs text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
                 <span className="font-semibold">{tc.tool_name}</span>
-                {tc.result?.message && <span className="ml-2 text-gray-600">{tc.result.message}</span>}
+                {tc.result?.message && <span className="ml-2 text-gray-600 dark:text-gray-400">{tc.result.message}</span>}
               </div>
             ))}
           </div>
         )}
 
-        <div className={`text-xs mt-2 ${isUser ? 'text-blue-200' : 'text-gray-500'}`}>
+        <div className={`text-xs mt-2 ${isUser ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
           {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>

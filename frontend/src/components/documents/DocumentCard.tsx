@@ -36,17 +36,21 @@ export default function DocumentCard({ document }: DocumentCardProps) {
   };
 
   return (
-    <div className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start gap-3">
-        <div className="p-2 bg-gray-100 rounded-lg">📄</div>
+        <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">📄</div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-gray-900 truncate">{document.filename}</h3>
-          <p className="text-sm text-gray-500">{formatSize(document.file_size)} • {document.file_type?.toUpperCase()}</p>
+          <h3 className="font-medium truncate">{document.filename}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {formatSize(document.file_size)} • {document.file_type?.toUpperCase()}
+          </p>
           <div className="flex items-center gap-1 mt-2 text-xs">
             {document.processed ? (
-              <span className="text-green-600">✓ Processed ({document.chunk_count} chunks)</span>
+              <span className="text-green-600 dark:text-green-400">
+                ✓ Processed ({document.chunk_count} chunks)
+              </span>
             ) : (
-              <span className="text-yellow-600">⏳ Processing...</span>
+              <span className="text-yellow-600 dark:text-yellow-400">⏳ Processing...</span>
             )}
           </div>
         </div>

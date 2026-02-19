@@ -25,6 +25,8 @@ const TOOL_LABELS: Record<string, string> = {
   delete_task: 'Deleting task',
   propose_plan: 'Creating plan',
   confirm_plan: 'Building plan tasks',
+  list_slack_channels: 'Fetching Slack channels',
+  send_slack_message: 'Sending Slack message',
 };
 
 export interface AgentStatus {
@@ -159,6 +161,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 label = 'Preparing plan...';
               } else if (lastTool === 'confirm_plan') {
                 label = 'Summarizing plan...';
+              } else if (lastTool === 'list_slack_channels') {
+                label = 'Reviewing Slack channels...';
+              } else if (lastTool === 'send_slack_message') {
+                label = 'Confirming message sent...';
               } else {
                 label = 'Processing next step...';
               }

@@ -3,3 +3,4 @@ export * from './task';
 export * from './document';
 export * from './chat';
 export * from './auth';
+export * from './integration';

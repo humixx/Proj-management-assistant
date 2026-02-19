@@ -13,6 +13,8 @@ const STAGE_CONFIG: Record<string, { icon: string; color: string }> = {
   delete_task: { icon: '🗑️', color: 'bg-red-500' },
   propose_plan: { icon: '🗺️', color: 'bg-indigo-500' },
   confirm_plan: { icon: '🏗️', color: 'bg-indigo-500' },
+  list_slack_channels: { icon: '🔈', color: 'bg-teal-500' },
+  send_slack_message: { icon: '📨', color: 'bg-teal-600' },
 };
 
 const FALLBACK_STAGES: Record<AgentStatus['stage'], { icon: string; color: string }> = {
@@ -59,6 +61,10 @@ export default function ThinkingIndicator({ status: statusProp, compact = false 
       detail = 'removing task';
     } else if (status.toolName === 'propose_plan' && status.toolArgs.goal) {
       detail = `"${status.toolArgs.goal}"`;
+    } else if (status.toolName === 'list_slack_channels') {
+      detail = 'listing channels';
+    } else if (status.toolName === 'send_slack_message' && status.toolArgs?.channel) {
+      detail = `#${status.toolArgs.channel}`;
     } else if (status.toolName === 'confirm_plan' && status.toolArgs.steps) {
       detail = `${status.toolArgs.steps.length} step(s)`;
     } else if (status.toolName === 'search_documents' && status.toolArgs.query) {
@@ -90,14 +96,14 @@ export default function ThinkingIndicator({ status: statusProp, compact = false 
 
   if (compact) {
     return (
-      <div className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
         </span>
         <span className="animate-pulse">
           {config.icon} {status.label}
-          {detail && <span className="text-gray-400 ml-1">— {detail}</span>}
+          {detail && <span className="text-gray-400 dark:text-gray-500 ml-1">— {detail}</span>}
         </span>
       </div>
     );
@@ -105,7 +111,7 @@ export default function ThinkingIndicator({ status: statusProp, compact = false 
 
   return (
     <div className="flex justify-start">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl px-4 py-3 max-w-sm">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-100 dark:border-blue-800 rounded-xl px-4 py-3 max-w-sm">
         <div className="flex items-center gap-3">
           <div className="relative flex-shrink-0">
             <div className={`w-8 h-8 rounded-full ${config.color} flex items-center justify-center`}>
@@ -119,11 +125,11 @@ export default function ThinkingIndicator({ status: statusProp, compact = false 
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-800">
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
               {status.label}
             </p>
             {detail && (
-              <p className="text-xs text-gray-500 truncate mt-0.5">
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
                 {detail}
               </p>
             )}

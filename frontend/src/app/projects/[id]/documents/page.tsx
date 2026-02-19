@@ -22,19 +22,19 @@ export default function DocumentsPage() {
   }, [projectId, currentProject, projects, selectProject]);
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 text-foreground">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Documents</h1>
-        <p className="text-sm sm:text-base text-gray-600">Upload PDF and DOCX files for AI analysis</p>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Documents</h1>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">Upload PDF and DOCX files for AI analysis</p>
       </div>
 
-      <div className="bg-white rounded-lg border p-4 sm:p-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Upload Documents</h2>
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">Upload Documents</h2>
         <FileUploader />
       </div>
 
       <div>
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Uploaded Documents</h2>
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">Uploaded Documents</h2>
         <DocumentList projectId={projectId} />
       </div>
     </div>

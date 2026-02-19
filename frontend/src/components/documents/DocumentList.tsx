@@ -20,7 +20,7 @@ export default function DocumentList({ projectId }: DocumentListProps) {
     }
   }, [projectId, currentProject, fetchDocuments]);
 
-  if (isLoading) return <div className="text-center py-8 text-gray-500">Loading documents...</div>;
+  if (isLoading) return <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading documents...</div>;
   if (error) return <div className="text-center py-8 text-red-500">Error: {error}</div>;
   if (documents.length === 0) return <NoDocumentsEmpty />;
 

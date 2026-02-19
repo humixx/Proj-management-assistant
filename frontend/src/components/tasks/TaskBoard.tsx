@@ -24,7 +24,7 @@ export default function TaskBoard({ projectId }: TaskBoardProps) {
   }, [projectId, fetchTasks]);
 
   if (isLoading && tasks.length === 0) {
-    return <div className="text-center py-12 text-gray-500">Loading tasks...</div>;
+    return <div className="text-center py-12 text-gray-500 dark:text-gray-400">Loading tasks...</div>;
   }
 
   const totalTasks = tasks.length;
@@ -35,9 +35,9 @@ export default function TaskBoard({ projectId }: TaskBoardProps) {
       <div className="flex flex-col lg:flex-row gap-4 overflow-x-auto pb-4">
         {columns.map((col) => (
           <div key={col.status} className="w-full lg:w-72 lg:flex-shrink-0">
-            <div className="rounded-lg bg-gray-50 p-3 border-2 border-dashed border-gray-200">
-              <h3 className="font-medium text-gray-400 mb-3">{col.title}</h3>
-              <div className="text-center py-8 text-gray-400 text-sm">
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-900 p-3 border-2 border-dashed border-gray-200 dark:border-gray-700">
+              <h3 className="font-medium text-gray-400 dark:text-gray-500 mb-3">{col.title}</h3>
+              <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
                 No tasks
               </div>
             </div>
@@ -48,7 +48,7 @@ export default function TaskBoard({ projectId }: TaskBoardProps) {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 overflow-x-auto pb-6 px-2">
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 overflow-x-auto pb-6 pt-2 px-4">
       {columns.map((col) => (
         <div key={col.status} className="w-full lg:w-72 lg:flex-shrink-0">
           <TaskColumn status={col.status} title={col.title} tasks={getTasksByStatus(col.status)} />

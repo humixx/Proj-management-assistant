@@ -6,10 +6,10 @@ import { useTaskStore } from '@/lib/stores';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 const priorityColors: Record<TaskPriority, string> = {
-  low: 'bg-gray-100 text-gray-600',
-  medium: 'bg-blue-100 text-blue-600',
-  high: 'bg-orange-100 text-orange-600',
-  critical: 'bg-red-100 text-red-600',
+  low: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200',
+  medium: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300',
+  high: 'bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-300',
+  critical: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300',
 };
 
 interface TaskCardProps {
@@ -48,10 +48,10 @@ export default function TaskCard({ task, subtasks }: TaskCardProps) {
     const doneCount = subtasks.filter((s) => s.status === 'done').length;
 
     return (
-      <div className="rounded-lg border-2 border-indigo-200 overflow-hidden shadow-sm">
+      <div className="rounded-lg border-2 border-indigo-200 dark:border-indigo-700 overflow-hidden shadow-sm">
         {/* Parent task header */}
         <div
-          className={`bg-gradient-to-r from-indigo-50 to-purple-50 p-3 cursor-pointer ${isUpdating ? 'opacity-50' : ''}`}
+          className={`bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/40 dark:to-purple-900/40 p-3 cursor-pointer ${isUpdating ? 'opacity-50' : ''}`}
           onClick={toggleExpand}
         >
           <div className="flex items-start gap-2">
@@ -61,11 +61,11 @@ export default function TaskCard({ task, subtasks }: TaskCardProps) {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className={`font-semibold text-gray-900 text-sm ${isExpanded ? '' : 'line-clamp-2'}`}>
+              <h4 className={`font-semibold text-sm ${isExpanded ? '' : 'line-clamp-2'}`}>
                 {task.title}
               </h4>
               {task.description && isExpanded && (
-                <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{task.description}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{task.description}</p>
               )}
             </div>
           </div>
@@ -87,7 +87,7 @@ export default function TaskCard({ task, subtasks }: TaskCardProps) {
                   handleStatusChange(e.target.value as TaskStatus);
                 }}
                 disabled={isUpdating}
-                className="text-xs border border-gray-300 rounded px-2 py-1 bg-white text-gray-900 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 onClick={(e) => e.stopPropagation()}
               >
                 <option value="todo">To Do</option>
@@ -118,10 +118,10 @@ export default function TaskCard({ task, subtasks }: TaskCardProps) {
         </div>
 
         {/* Subtasks toggle + list */}
-        <div className="bg-white">
+        <div className="bg-white dark:bg-gray-900">
           <button
             onClick={() => setSubtasksExpanded(!subtasksExpanded)}
-            className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 transition-colors border-t border-indigo-100"
+            className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-t border-indigo-100 dark:border-indigo-800"
           >
             <svg className={`w-3 h-3 transition-transform ${subtasksExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -155,15 +155,15 @@ export default function TaskCard({ task, subtasks }: TaskCardProps) {
   // Regular standalone task card (no subtasks)
   return (
     <div
-      className={`bg-white rounded-lg p-4 shadow-sm border hover:shadow-md transition-all cursor-pointer ${isUpdating ? 'opacity-50' : ''}`}
+      className={`bg-white dark:bg-gray-900 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer ${isUpdating ? 'opacity-50' : ''}`}
       onClick={toggleExpand}
     >
-      <h4 className={`font-medium text-gray-900 text-sm mb-2 ${isExpanded ? '' : 'line-clamp-2'}`}>
+      <h4 className={`font-medium text-sm mb-2 ${isExpanded ? '' : 'line-clamp-2'}`}>
         {task.title}
       </h4>
 
       {task.description && (
-        <p className={`text-xs text-gray-600 mb-3 whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-3'}`}>
+        <p className={`text-xs text-gray-600 dark:text-gray-300 mb-3 whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-3'}`}>
           {task.description}
         </p>
       )}
@@ -180,7 +180,7 @@ export default function TaskCard({ task, subtasks }: TaskCardProps) {
               handleStatusChange(e.target.value as TaskStatus);
             }}
             disabled={isUpdating}
-            className="text-xs border border-gray-300 rounded px-2 py-1 bg-white text-gray-900 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             onClick={(e) => e.stopPropagation()}
           >
             <option value="todo" className="text-gray-900">To Do</option>
@@ -202,7 +202,7 @@ export default function TaskCard({ task, subtasks }: TaskCardProps) {
       </div>
 
       {(task.assignee || task.due_date) && (
-        <div className="flex flex-wrap gap-2 text-xs text-gray-500 border-t pt-2">
+        <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-2">
           {task.assignee && (
             <span className="flex items-center gap-1">
               <span className="font-medium">👤</span>
@@ -219,7 +219,7 @@ export default function TaskCard({ task, subtasks }: TaskCardProps) {
       )}
 
       {isExpanded && (
-        <div className="mt-2 pt-2 border-t text-xs text-gray-400">
+        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500">
           Click to collapse
         </div>
       )}
@@ -254,9 +254,15 @@ function SubtaskRow({ task, index }: { task: Task; index: number }) {
   const isDone = task.status === 'done';
 
   return (
-    <div className={`flex items-center gap-2 rounded-md border px-2.5 py-2 transition-colors ${isDone ? 'bg-green-50/50 border-green-100' : 'bg-gray-50/50 border-gray-100 hover:border-indigo-200'} ${isUpdating ? 'opacity-50' : ''}`}>
+    <div className={`flex items-center gap-2 rounded-md border px-2.5 py-2 transition-colors ${
+      isDone
+        ? 'bg-green-50/50 dark:bg-green-900/30 border-green-100 dark:border-green-700'
+        : 'bg-gray-50/50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-500'
+    } ${isUpdating ? 'opacity-50' : ''}`}>
       {/* Step number */}
-      <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${isDone ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'}`}>
+      <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+        isDone ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
+      }`}>
         {isDone ? (
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -267,7 +273,7 @@ function SubtaskRow({ task, index }: { task: Task; index: number }) {
       </span>
 
       {/* Title */}
-      <span className={`flex-1 text-xs font-medium min-w-0 truncate ${isDone ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+      <span className={`flex-1 text-xs font-medium min-w-0 truncate ${isDone ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-800 dark:text-gray-100'}`}>
         {task.title}
       </span>
 
@@ -283,7 +289,7 @@ function SubtaskRow({ task, index }: { task: Task; index: number }) {
         value={task.status}
         onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
         disabled={isUpdating}
-        className="text-[10px] border border-gray-200 rounded px-1 py-0.5 bg-white text-gray-700 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-400"
+        className="text-[10px] border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-400"
       >
         <option value="todo">To Do</option>
         <option value="in_progress">In Progress</option>

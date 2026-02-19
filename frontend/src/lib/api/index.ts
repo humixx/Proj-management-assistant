@@ -4,3 +4,4 @@ export { projectsApi } from './projects';
 export { tasksApi } from './tasks';
 export { documentsApi } from './documents';
 export { chatApi } from './chat';
+export { integrationsApi } from './integrations';

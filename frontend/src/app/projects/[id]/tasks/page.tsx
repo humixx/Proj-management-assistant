@@ -26,11 +26,11 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="p-4 sm:p-6 text-foreground">
       <div className="mb-4 sm:mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Tasks</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Manage your project tasks</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Tasks</h1>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">Manage your project tasks</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
