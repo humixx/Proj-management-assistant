@@ -197,7 +197,8 @@ export default function Sidebar() {
             <button
               onClick={() => {
                 logout();
-                router.push('/login');
+                // Use window.location for full page reload to ensure cookie is cleared
+                window.location.href = '/';
               }}
               className="mt-2 w-full px-3 py-1.5 text-xs text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
             >
