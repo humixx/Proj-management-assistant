@@ -18,29 +18,36 @@ from app.agent.tools import (
     ProposePlanTool,
     ConfirmPlanTool,
 )
-from app.services.llm_service import llm_service
+from app.services.llm_service import get_llm_provider
 
 
 class Agent:
     """Main agent that orchestrates conversations and tool usage."""
-    
-    def __init__(self, db: AsyncSession, project_id: UUID):
+
+    def __init__(self, db: AsyncSession, project_id: UUID, llm_config: Optional[dict] = None):
         """
         Initialize the agent.
-        
+
         Args:
             db: Database session
             project_id: Current project ID
+            llm_config: Optional dict with 'llm_provider' and 'llm_model' keys.
+                        Defaults to Anthropic Claude if not provided.
         """
         self.db = db
         self.project_id = project_id
         self.memory = AgentMemory(db, project_id)
         self.system_prompt = get_system_prompt(str(project_id))
-        
+        config = llm_config or {}
+        self.llm = get_llm_provider(
+            provider=config.get("llm_provider", "anthropic"),
+            model=config.get("llm_model"),
+        )
+
         # Initialize tool registry
         self.tools = ToolRegistry()
         self._register_tools()
-    
+
     def _register_tools(self) -> None:
         """Register all available tools."""
         self.tools.register(SearchDocumentsTool(self.db, self.project_id))
@@ -51,70 +58,70 @@ class Agent:
         self.tools.register(DeleteTaskTool(self.db, self.project_id))
         self.tools.register(ProposePlanTool(self.db, self.project_id))
         self.tools.register(ConfirmPlanTool(self.db, self.project_id))
-    
+
     async def run(self, user_message: str) -> dict:
         """
         Process a user message and return the agent's response.
-        
+
         Args:
             user_message: The user's input message
-            
+
         Returns:
             Dict with message, tool_calls, and any other response data
         """
         # Save user message
         await self.memory.save_message(role="user", content=user_message)
-        
+
         # Get chat history for context
         history = await self.memory.get_chat_history(limit=10)
-        
+
         # Build messages for LLM
         messages = history.copy()
         if not messages or messages[-1]["content"] != user_message:
             messages.append({"role": "user", "content": user_message})
-        
+
         # Get tool definitions
         tool_definitions = self.tools.get_tool_definitions()
-        
+
         # Track tool calls for response
         all_tool_calls = []
-        
+
         # Agent loop - keep processing until we get a final response
         max_iterations = 10
         iteration = 0
-        
+
         while iteration < max_iterations:
             iteration += 1
-            
+
             # Call LLM
-            response = await llm_service.chat(
+            response = await self.llm.chat(
                 messages=messages,
                 system_prompt=self.system_prompt,
                 tools=tool_definitions,
             )
-            
+
             # If no tool calls, we have our final response
             if not response["tool_calls"]:
                 final_message = response["content"]
-                
+
                 # Save assistant response
                 await self.memory.save_message(
                     role="assistant",
                     content=final_message,
                     tool_calls={"calls": all_tool_calls} if all_tool_calls else None,
                 )
-                
+
                 return {
                     "message": final_message,
                     "tool_calls": all_tool_calls if all_tool_calls else None,
                 }
-            
+
             # Process tool calls
             tool_results = []
             for tool_call in response["tool_calls"]:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["arguments"]
-                
+
                 # Get and execute tool
                 tool = self.tools.get(tool_name)
                 if tool:
@@ -124,19 +131,19 @@ class Agent:
                         result = {"error": str(e)}
                 else:
                     result = {"error": f"Unknown tool: {tool_name}"}
-                
+
                 tool_results.append({
                     "tool_use_id": tool_call["id"],
                     "result": result,
                 })
-                
+
                 # Track for response
                 all_tool_calls.append({
                     "tool_name": tool_name,
                     "arguments": tool_args,
                     "result": result,
                 })
-            
+
             # Add assistant message with tool use to history
             assistant_content = []
             if response["content"]:
@@ -148,9 +155,9 @@ class Agent:
                     "name": tc["name"],
                     "input": tc["arguments"],
                 })
-            
+
             messages.append({"role": "assistant", "content": assistant_content})
-            
+
             # Add tool results
             tool_result_content = []
             for tr in tool_results:
@@ -159,19 +166,19 @@ class Agent:
                     "tool_use_id": tr["tool_use_id"],
                     "content": json.dumps(tr["result"]),
                 })
-            
+
             messages.append({"role": "user", "content": tool_result_content})
-        
+
         # Max iterations reached
         return {
             "message": "I apologize, but I wasn't able to complete the request. Please try again.",
             "tool_calls": all_tool_calls if all_tool_calls else None,
         }
-    
+
     async def run_streaming(self, user_message: str) -> AsyncGenerator[dict, None]:
         """
         Process a user message and yield progress events as they happen.
-        
+
         Yields dicts like:
           {"type": "thinking", "stage": "calling_llm"}
           {"type": "tool_start", "tool_name": "create_task", "arguments": {...}}
@@ -180,21 +187,21 @@ class Agent:
         """
         # Save user message
         await self.memory.save_message(role="user", content=user_message)
-        
+
         # Get chat history for context
         history = await self.memory.get_chat_history(limit=10)
-        
+
         # Build messages for LLM
         messages = history.copy()
         if not messages or messages[-1]["content"] != user_message:
             messages.append({"role": "user", "content": user_message})
-        
+
         # Get tool definitions
         tool_definitions = self.tools.get_tool_definitions()
-        
+
         # Track tool calls for response
         all_tool_calls = []
-        
+
         max_iterations = 10
         iteration = 0
 
@@ -213,7 +220,7 @@ class Agent:
 
             # Call LLM with streaming — forward text deltas to the frontend
             response = None
-            async for llm_event in llm_service.chat_streaming(
+            async for llm_event in self.llm.chat_streaming(
                 messages=messages,
                 system_prompt=self.system_prompt,
                 tools=tool_definitions,
@@ -292,7 +299,7 @@ class Agent:
                     "arguments": tool_args,
                     "result": result,
                 })
-            
+
             # Add assistant message with tool use to history
             assistant_content = []
             if response["content"]:
@@ -304,9 +311,9 @@ class Agent:
                     "name": tc["name"],
                     "input": tc["arguments"],
                 })
-            
+
             messages.append({"role": "assistant", "content": assistant_content})
-            
+
             tool_result_content = []
             for tr in tool_results:
                 tool_result_content.append({
@@ -314,9 +321,9 @@ class Agent:
                     "tool_use_id": tr["tool_use_id"],
                     "content": json.dumps(tr["result"]),
                 })
-            
+
             messages.append({"role": "user", "content": tool_result_content})
-        
+
         # Max iterations reached
         yield {
             "type": "response",

@@ -16,7 +16,9 @@ class Settings(BaseSettings):
 
     # API Keys
     VOYAGE_API_KEY: str
-    ANTHROPIC_API_KEY: str
+    ANTHROPIC_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
 
     # Slack Integration
     SLACK_CLIENT_ID: str = ""

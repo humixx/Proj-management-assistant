@@ -3,7 +3,6 @@ import json
 import logging
 from uuid import UUID
 
-from anthropic import APIStatusError, APIConnectionError
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +12,7 @@ from app.auth.deps import get_current_user
 from app.agent.core import Agent
 from app.db.database import async_session_maker
 from app.db.models.user import User
-from app.db.repositories import ChatRepository
+from app.db.repositories import ChatRepository, ProjectRepository
 from app.schemas import (
     ChatRequest,
     ChatResponse,
@@ -26,17 +25,21 @@ logger = logging.getLogger(__name__)
 
 
 def _friendly_api_error(e: Exception) -> str:
-    """Turn Anthropic API errors into user-friendly messages."""
-    if isinstance(e, APIStatusError):
-        if e.status_code == 529 or "overloaded" in str(e).lower():
-            return "Claude is temporarily overloaded. Please try again in a few seconds."
-        if e.status_code == 429:
-            return "Rate limit reached. Please wait a moment and try again."
-        if e.status_code in (500, 503):
-            return "Claude API is experiencing issues. Please try again shortly."
-    if isinstance(e, APIConnectionError):
-        return "Could not connect to Claude API. Please check your connection."
+    """Turn LLM API errors into user-friendly messages."""
+    err_str = str(e).lower()
+    # Try to get status code from the exception if available
+    status_code = getattr(e, "status_code", None)
+
+    if status_code == 529 or "overloaded" in err_str:
+        return "The AI provider is temporarily overloaded. Please try again in a few seconds."
+    if status_code == 429 or "rate limit" in err_str or "rate_limit" in err_str:
+        return "Rate limit reached. Please wait a moment and try again."
+    if status_code in (500, 503) or "server error" in err_str:
+        return "The AI provider API is experiencing issues. Please try again shortly."
+    if "connection" in err_str or "connect" in err_str:
+        return "Could not connect to the AI provider. Please check your connection."
     return f"Agent error: {str(e)}"
+
 
 router = APIRouter()
 
@@ -57,7 +60,10 @@ async def send_message(
     await verify_project_ownership(project_id, current_user.id, db)
 
     try:
-        agent = Agent(db, project_id)
+        project = await ProjectRepository(db).get_by_id(project_id)
+        llm_config = (project.settings or {}) if project else {}
+
+        agent = Agent(db, project_id, llm_config=llm_config)
         result = await agent.run(data.message)
 
         # Format tool calls for response
@@ -77,13 +83,11 @@ async def send_message(
             tool_calls=tool_calls,
         )
 
-    except (APIStatusError, APIConnectionError) as e:
+    except Exception as e:
         msg = _friendly_api_error(e)
         logger.warning(f"Chat API error: {e}")
-        status = e.status_code if isinstance(e, APIStatusError) else 503
+        status = getattr(e, "status_code", 500) or 500
         raise HTTPException(status_code=status, detail=msg)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Agent error: {str(e)}")
 
 
 @router.post("/stream")
@@ -106,6 +110,10 @@ async def send_message_stream(
     # Verify ownership using the request-scoped session (still valid here)
     await verify_project_ownership(project_id, current_user.id, db)
 
+    # Load llm_config before the generator (request-scoped session is valid here)
+    project = await ProjectRepository(db).get_by_id(project_id)
+    llm_config = (project.settings or {}) if project else {}
+
     async def event_stream():
         # Create a NEW session inside the generator so it stays alive
         # for the entire stream duration (the Depends(get_db) session
@@ -113,7 +121,7 @@ async def send_message_stream(
         # streaming actually begins).
         async with async_session_maker() as stream_db:
             try:
-                agent = Agent(stream_db, project_id)
+                agent = Agent(stream_db, project_id, llm_config=llm_config)
 
                 # Emit initial thinking stage
                 yield f"data: {json.dumps({'type': 'thinking', 'stage': 'analyzing'})}\n\n"
@@ -122,13 +130,10 @@ async def send_message_stream(
                     yield f"data: {json.dumps(event)}\n\n"
 
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
-            except (APIStatusError, APIConnectionError) as e:
+            except Exception as e:
                 msg = _friendly_api_error(e)
                 logger.warning(f"Stream API error: {e}")
                 yield f"data: {json.dumps({'type': 'error', 'message': msg})}\n\n"
-            except Exception as e:
-                logger.exception(f"Stream error: {e}")
-                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(
         event_stream(),

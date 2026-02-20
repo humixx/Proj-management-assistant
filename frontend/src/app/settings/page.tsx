@@ -4,15 +4,79 @@ import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { useProjectStore } from '@/lib/stores';
+import { projectsApi } from '@/lib/api';
 import SlackStatusCard from '@/components/settings/SlackStatusCard';
 
+const LLM_PROVIDERS = [
+  { value: 'anthropic', label: 'Anthropic Claude' },
+  { value: 'openai', label: 'OpenAI GPT' },
+  { value: 'gemini', label: 'Google Gemini' },
+] as const;
+
+const MODELS_BY_PROVIDER: Record<string, { value: string; label: string }[]> = {
+  anthropic: [
+    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (default)' },
+    { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+  ],
+  openai: [
+    { value: 'gpt-4o', label: 'GPT-4o (default)' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+  ],
+  gemini: [
+    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (default)' },
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  ],
+};
+
 export default function SettingsPage() {
-  const { currentProject } = useProjectStore();
+  const { currentProject, selectProject } = useProjectStore();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const backHref = currentProject ? `/projects/${currentProject.id}/chat` : '/';
 
+  // AI Provider state
+  const [llmProvider, setLlmProvider] = useState<string>(
+    currentProject?.settings?.llm_provider || 'anthropic'
+  );
+  const [llmModel, setLlmModel] = useState<string>(
+    currentProject?.settings?.llm_model || ''
+  );
+  const [llmSaving, setLlmSaving] = useState(false);
+  const [llmSaved, setLlmSaved] = useState(false);
+
   useEffect(() => setMounted(true), []);
+
+  // Reset model when provider changes
+  const handleProviderChange = (provider: string) => {
+    setLlmProvider(provider);
+    setLlmModel('');
+    setLlmSaved(false);
+  };
+
+  const handleSaveLlmSettings = async () => {
+    if (!currentProject) return;
+    setLlmSaving(true);
+    setLlmSaved(false);
+    try {
+      const updated = await projectsApi.update(currentProject.id, {
+        settings: {
+          ...currentProject.settings,
+          llm_provider: llmProvider as 'anthropic' | 'openai' | 'gemini',
+          llm_model: llmModel || undefined,
+        },
+      });
+      selectProject(updated);
+      setLlmSaved(true);
+      setTimeout(() => setLlmSaved(false), 3000);
+    } catch {
+      // error handled silently; user can retry
+    } finally {
+      setLlmSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -82,6 +146,65 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+
+          {/* AI Provider Settings */}
+          {currentProject && (
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">AI Provider</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Choose the AI model used for chat in{' '}
+                <span className="font-medium text-gray-700 dark:text-gray-300">{currentProject.name}</span>.
+                API keys must be configured on the server.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Provider
+                  </label>
+                  <select
+                    value={llmProvider}
+                    onChange={(e) => handleProviderChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  >
+                    {LLM_PROVIDERS.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Model
+                  </label>
+                  <select
+                    value={llmModel}
+                    onChange={(e) => { setLlmModel(e.target.value); setLlmSaved(false); }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  >
+                    <option value="">Use provider default</option>
+                    {(MODELS_BY_PROVIDER[llmProvider] || []).map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleSaveLlmSettings}
+                    disabled={llmSaving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {llmSaving ? 'Saving…' : 'Save'}
+                  </button>
+                  {llmSaved && (
+                    <span className="text-sm text-green-600 dark:text-green-400">Saved!</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* RAG Settings */}
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
