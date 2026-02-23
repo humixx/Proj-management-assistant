@@ -30,6 +30,8 @@ def _friendly_api_error(e: Exception) -> str:
     # Try to get status code from the exception if available
     status_code = getattr(e, "status_code", None)
 
+    if status_code == 401 or "authentication" in err_str or ("invalid" in err_str and "key" in err_str) or "api_key" in err_str:
+        return "API key is invalid or not configured. Please add your API key in Settings → AI Provider."
     if status_code == 529 or "overloaded" in err_str:
         return "The AI provider is temporarily overloaded. Please try again in a few seconds."
     if status_code == 429 or "rate limit" in err_str or "rate_limit" in err_str:

@@ -199,10 +199,15 @@ export default function SettingsPage() {
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Provider</h3>
-                {hasExistingConfig && (
+                {hasExistingConfig ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                     Configured
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    API key not set
                   </span>
                 )}
               </div>
