@@ -38,6 +38,8 @@ def _friendly_api_error(e: Exception) -> str:
         return "The AI provider API is experiencing issues. Please try again shortly."
     if "connection" in err_str or "connect" in err_str:
         return "Could not connect to the AI provider. Please check your connection."
+    if status_code == 401 or "auth" in err_str or "api key" in err_str or "invalid x-api-key" in err_str:
+        return "Invalid or missing API key. Please configure your API key in Settings > AI Provider."
     return f"Agent error: {str(e)}"
 
 

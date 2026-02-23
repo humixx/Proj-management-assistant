@@ -17,9 +17,10 @@ RETRYABLE_STATUS_CODES = {429, 500, 503}
 class OpenAIProvider(BaseLLMProvider):
     """LLM provider using OpenAI API."""
 
-    def __init__(self, model: Optional[str] = None):
+    def __init__(self, model: Optional[str] = None, api_key: Optional[str] = None):
         from openai import AsyncOpenAI
-        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        key = api_key or settings.OPENAI_API_KEY
+        self.client = AsyncOpenAI(api_key=key)
         self.model = model or self.default_model
 
     @property

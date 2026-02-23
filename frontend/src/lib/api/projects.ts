@@ -21,4 +21,15 @@ export const projectsApi = {
   delete: async (projectId: string): Promise<void> => {
     await apiClient.delete(`/projects/${projectId}`);
   },
+  validateLLMKey: async (
+    projectId: string,
+    provider: string,
+    apiKey: string,
+  ): Promise<{ valid: boolean; message: string }> => {
+    const response = await apiClient.post<{ valid: boolean; message: string }>(
+      `/projects/${projectId}/validate-llm`,
+      { provider, api_key: apiKey },
+    );
+    return response.data;
+  },
 };

@@ -15,9 +15,10 @@ INITIAL_BACKOFF = 2
 class GeminiProvider(BaseLLMProvider):
     """LLM provider using Google Gemini API."""
 
-    def __init__(self, model: Optional[str] = None):
+    def __init__(self, model: Optional[str] = None, api_key: Optional[str] = None):
         import google.generativeai as genai
-        genai.configure(api_key=settings.GEMINI_API_KEY)
+        key = api_key or settings.GEMINI_API_KEY
+        genai.configure(api_key=key)
         self._genai = genai
         self.model = model or self.default_model
 
@@ -27,7 +28,29 @@ class GeminiProvider(BaseLLMProvider):
 
     @property
     def default_model(self) -> str:
-        return "gemini-1.5-pro"
+        return "gemini-2.5-flash"
+
+    # JSON Schema keywords that Gemini does not support.
+    # NOTE: Do NOT add "title" here — it collides with legitimate property names
+    # like `properties.title` inside tool schemas.
+    _UNSUPPORTED_SCHEMA_KEYS = {"default", "examples", "$schema", "additionalProperties"}
+
+    def _sanitize_schema(self, obj: dict) -> dict:
+        """Recursively strip keys that Gemini does not accept in JSON Schema."""
+        cleaned: dict = {}
+        for key, value in obj.items():
+            if key in self._UNSUPPORTED_SCHEMA_KEYS:
+                continue
+            if isinstance(value, dict):
+                cleaned[key] = self._sanitize_schema(value)
+            elif isinstance(value, list):
+                cleaned[key] = [
+                    self._sanitize_schema(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
+            else:
+                cleaned[key] = value
+        return cleaned
 
     def _convert_tools(self, tools: list[dict]) -> list:
         """Convert Anthropic-format tools to Gemini FunctionDeclarations."""
@@ -36,10 +59,11 @@ class GeminiProvider(BaseLLMProvider):
         declarations = []
         for tool in tools:
             schema = tool.get("input_schema", {})
-            # Gemini expects parameters in a specific format
+            # Sanitize properties to remove unsupported fields like "default"
+            properties = self._sanitize_schema(schema.get("properties", {}))
             parameters = {
                 "type": schema.get("type", "object"),
-                "properties": schema.get("properties", {}),
+                "properties": properties,
             }
             if "required" in schema:
                 parameters["required"] = schema["required"]
