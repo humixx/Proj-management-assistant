@@ -7,11 +7,16 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ProjectSettings(BaseModel):
-    """Project RAG settings."""
+    """Project settings including LLM provider and RAG configuration."""
+    # RAG settings
     chunk_size: Optional[int] = 512
     chunk_overlap: Optional[int] = 50
     top_k: Optional[int] = 5
     similarity_threshold: Optional[float] = 0.7
+    # LLM provider settings
+    llm_provider: Optional[str] = None
+    llm_model: Optional[str] = None
+    llm_api_key: Optional[str] = None
 
 
 class ProjectCreate(BaseModel):
@@ -36,7 +41,7 @@ class ProjectResponse(BaseModel):
     settings: Optional[dict] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 

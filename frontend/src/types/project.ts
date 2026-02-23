@@ -12,6 +12,9 @@ export interface ProjectSettings {
   chunk_overlap?: number;
   top_k?: number;
   similarity_threshold?: number;
+  llm_provider?: 'anthropic' | 'openai';
+  llm_model?: string;
+  llm_api_key?: string;
 }
 
 export interface ProjectCreate {

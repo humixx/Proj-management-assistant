@@ -4,15 +4,126 @@ import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { useProjectStore } from '@/lib/stores';
+import { useToast } from '@/lib/stores/uiStore';
+import { projectsApi } from '@/lib/api';
 import SlackStatusCard from '@/components/settings/SlackStatusCard';
 
+const LLM_PROVIDERS = [
+  { value: 'anthropic', label: 'Anthropic Claude' },
+  { value: 'openai', label: 'OpenAI GPT' },
+] as const;
+
+const MODELS_BY_PROVIDER: Record<string, { value: string; label: string }[]> = {
+  anthropic: [
+    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (default)' },
+    { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+  ],
+  openai: [
+    { value: 'gpt-4o', label: 'GPT-4o (default)' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+  ],
+};
+
+const API_KEY_PLACEHOLDERS: Record<string, string> = {
+  anthropic: 'sk-ant-...',
+  openai: 'sk-...',
+};
+
 export default function SettingsPage() {
-  const { currentProject } = useProjectStore();
+  const { currentProject, selectProject } = useProjectStore();
   const { theme, setTheme } = useTheme();
+  const toast = useToast();
   const [mounted, setMounted] = useState(false);
   const backHref = currentProject ? `/projects/${currentProject.id}/chat` : '/';
 
+  // AI Provider state
+  const [llmProvider, setLlmProvider] = useState<string>(
+    currentProject?.settings?.llm_provider || 'anthropic'
+  );
+  const [llmModel, setLlmModel] = useState<string>(
+    currentProject?.settings?.llm_model || ''
+  );
+  const [llmApiKey, setLlmApiKey] = useState<string>(
+    currentProject?.settings?.llm_api_key || ''
+  );
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [llmSaving, setLlmSaving] = useState(false);
+  const [llmValidating, setLlmValidating] = useState(false);
+
   useEffect(() => setMounted(true), []);
+
+  // Sync state when project changes
+  useEffect(() => {
+    if (currentProject) {
+      setLlmProvider(currentProject.settings?.llm_provider || 'anthropic');
+      setLlmModel(currentProject.settings?.llm_model || '');
+      setLlmApiKey(currentProject.settings?.llm_api_key || '');
+    }
+  }, [currentProject?.id]);
+
+  // Reset model and API key when provider changes
+  const handleProviderChange = (provider: string) => {
+    setLlmProvider(provider);
+    setLlmModel('');
+    setLlmApiKey('');
+    setShowApiKey(false);
+  };
+
+  const handleValidateAndSave = async () => {
+    if (!currentProject) return;
+
+    if (!llmApiKey.trim()) {
+      toast.warning('Please enter an API key for the selected provider.');
+      return;
+    }
+
+    // Step 1: Validate the API key
+    setLlmValidating(true);
+    try {
+      const result = await projectsApi.validateLLMKey(
+        currentProject.id,
+        llmProvider,
+        llmApiKey.trim(),
+      );
+
+      if (!result.valid) {
+        toast.error(result.message);
+        setLlmValidating(false);
+        return;
+      }
+    } catch {
+      toast.error('Failed to validate API key. Please check your connection.');
+      setLlmValidating(false);
+      return;
+    }
+    setLlmValidating(false);
+
+    // Step 2: Save the settings
+    setLlmSaving(true);
+    try {
+      const updated = await projectsApi.update(currentProject.id, {
+        settings: {
+          ...currentProject.settings,
+          llm_provider: llmProvider as 'anthropic' | 'openai',
+          llm_model: llmModel || undefined,
+          llm_api_key: llmApiKey.trim(),
+        },
+      });
+      selectProject(updated);
+      toast.success(
+        `AI provider configured successfully! Using ${LLM_PROVIDERS.find((p) => p.value === llmProvider)?.label || llmProvider}.`
+      );
+    } catch {
+      toast.error('Failed to save LLM settings. Please try again.');
+    } finally {
+      setLlmSaving(false);
+    }
+  };
+
+  const hasExistingConfig = currentProject?.settings?.llm_api_key && currentProject?.settings?.llm_provider;
+  const isBusy = llmSaving || llmValidating;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -82,6 +193,110 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+
+          {/* AI Provider Settings */}
+          {currentProject && (
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Provider</h3>
+                {hasExistingConfig ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    Configured
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    API key not set
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Configure the AI model for chat in{' '}
+                <span className="font-medium text-gray-700 dark:text-gray-300">{currentProject.name}</span>.
+                Your API key is stored per project and can be changed anytime.
+              </p>
+              <div className="space-y-4">
+                {/* Provider */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Provider
+                  </label>
+                  <select
+                    value={llmProvider}
+                    onChange={(e) => handleProviderChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  >
+                    {LLM_PROVIDERS.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* API Key */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    API Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiKey ? 'text' : 'password'}
+                      value={llmApiKey}
+                      onChange={(e) => setLlmApiKey(e.target.value)}
+                      placeholder={API_KEY_PLACEHOLDERS[llmProvider] || 'Enter your API key'}
+                      className="w-full px-3 py-2 pr-20 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white dark:placeholder-gray-500 font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      {showApiKey ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                    Your key is stored securely per project and never shared.
+                  </p>
+                </div>
+
+                {/* Model */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Model
+                  </label>
+                  <select
+                    value={llmModel}
+                    onChange={(e) => setLlmModel(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  >
+                    <option value="">Use provider default</option>
+                    {(MODELS_BY_PROVIDER[llmProvider] || []).map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Save Button */}
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    onClick={handleValidateAndSave}
+                    disabled={isBusy}
+                    className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {llmValidating
+                      ? 'Validating key...'
+                      : llmSaving
+                        ? 'Saving...'
+                        : 'Validate & Save'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* RAG Settings */}
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
