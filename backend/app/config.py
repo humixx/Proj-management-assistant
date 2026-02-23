@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 24
 
+    # Encryption
+    ENCRYPTION_KEY: str = ""
+
     # File Upload
     UPLOAD_DIR: str = "./uploads"
 

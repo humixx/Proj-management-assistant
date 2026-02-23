@@ -3,7 +3,9 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from app.auth.encryption import encrypt_api_key, decrypt_api_key
 
 
 class ProjectSettings(BaseModel):
@@ -17,6 +19,20 @@ class ProjectSettings(BaseModel):
     llm_provider: Optional[str] = None
     llm_model: Optional[str] = None
     llm_api_key: Optional[str] = None
+
+    @field_validator('llm_api_key', mode='before')
+    @classmethod
+    def encrypt_api_key_on_store(cls, v):
+        """Encrypt API key when storing to database."""
+        if v:
+            return encrypt_api_key(v)
+        return v
+
+    def get_decrypted_api_key(self) -> Optional[str]:
+        """Get the decrypted API key for use with LLM providers."""
+        if self.llm_api_key:
+            return decrypt_api_key(self.llm_api_key)
+        return None
 
 
 class ProjectCreate(BaseModel):
