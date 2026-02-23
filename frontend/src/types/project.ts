@@ -14,6 +14,7 @@ export interface ProjectSettings {
   similarity_threshold?: number;
   llm_provider?: 'anthropic' | 'openai' | 'gemini';
   llm_model?: string;
+  llm_api_key?: string;
 }
 
 export interface ProjectCreate {

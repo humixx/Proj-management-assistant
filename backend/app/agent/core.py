@@ -42,6 +42,7 @@ class Agent:
         self.llm = get_llm_provider(
             provider=config.get("llm_provider", "anthropic"),
             model=config.get("llm_model"),
+            api_key=config.get("llm_api_key") or None,
         )
 
         # Initialize tool registry

@@ -19,8 +19,8 @@ RETRYABLE_STATUS_CODES = {429, 529, 503, 500}
 class AnthropicProvider(BaseLLMProvider):
     """LLM provider using Anthropic Claude API."""
 
-    def __init__(self, model: Optional[str] = None):
-        self.client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+    def __init__(self, model: Optional[str] = None, api_key: Optional[str] = None):
+        self.client = AsyncAnthropic(api_key=api_key or settings.ANTHROPIC_API_KEY or None)
         self.model = model or self.default_model
 
     @property

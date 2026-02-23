@@ -15,9 +15,9 @@ INITIAL_BACKOFF = 2
 class GeminiProvider(BaseLLMProvider):
     """LLM provider using Google Gemini API."""
 
-    def __init__(self, model: Optional[str] = None):
+    def __init__(self, model: Optional[str] = None, api_key: Optional[str] = None):
         import google.generativeai as genai
-        genai.configure(api_key=settings.GEMINI_API_KEY)
+        genai.configure(api_key=api_key or settings.GEMINI_API_KEY or None)
         self._genai = genai
         self.model = model or self.default_model
 

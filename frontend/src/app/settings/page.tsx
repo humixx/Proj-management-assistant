@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { useProjectStore } from '@/lib/stores';
+import { useToast } from '@/lib/stores/uiStore';
 import { projectsApi } from '@/lib/api';
 import SlackStatusCard from '@/components/settings/SlackStatusCard';
 
@@ -31,9 +32,16 @@ const MODELS_BY_PROVIDER: Record<string, { value: string; label: string }[]> = {
   ],
 };
 
+const API_KEY_PLACEHOLDERS: Record<string, string> = {
+  anthropic: 'sk-ant-...',
+  openai: 'sk-...',
+  gemini: 'AIza...',
+};
+
 export default function SettingsPage() {
   const { currentProject, selectProject } = useProjectStore();
   const { theme, setTheme } = useTheme();
+  const toast = useToast();
   const [mounted, setMounted] = useState(false);
   const backHref = currentProject ? `/projects/${currentProject.id}/chat` : '/';
 
@@ -44,35 +52,44 @@ export default function SettingsPage() {
   const [llmModel, setLlmModel] = useState<string>(
     currentProject?.settings?.llm_model || ''
   );
+  const [llmApiKey, setLlmApiKey] = useState<string>('');
+  const [showApiKey, setShowApiKey] = useState(false);
   const [llmSaving, setLlmSaving] = useState(false);
-  const [llmSaved, setLlmSaved] = useState(false);
+
+  // Whether the current project already has an API key stored for this provider
+  const hasStoredApiKey = Boolean(currentProject?.settings?.llm_api_key);
+  const storedProvider = currentProject?.settings?.llm_provider || 'anthropic';
 
   useEffect(() => setMounted(true), []);
 
-  // Reset model when provider changes
+  // Reset model and clear api key input when provider changes
   const handleProviderChange = (provider: string) => {
     setLlmProvider(provider);
     setLlmModel('');
-    setLlmSaved(false);
+    setLlmApiKey('');
+    setShowApiKey(false);
   };
 
   const handleSaveLlmSettings = async () => {
     if (!currentProject) return;
+
     setLlmSaving(true);
-    setLlmSaved(false);
     try {
       const updated = await projectsApi.update(currentProject.id, {
         settings: {
           ...currentProject.settings,
           llm_provider: llmProvider as 'anthropic' | 'openai' | 'gemini',
           llm_model: llmModel || undefined,
+          // Only update the stored key if the user typed a new one
+          ...(llmApiKey.trim() ? { llm_api_key: llmApiKey.trim() } : {}),
         },
       });
       selectProject(updated);
-      setLlmSaved(true);
-      setTimeout(() => setLlmSaved(false), 3000);
-    } catch {
-      // error handled silently; user can retry
+      setLlmApiKey(''); // clear input after save; key is stored in DB
+      toast.success('AI provider settings saved successfully.');
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || err?.message || 'Failed to save settings.';
+      toast.error(detail);
     } finally {
       setLlmSaving(false);
     }
@@ -150,11 +167,24 @@ export default function SettingsPage() {
           {/* AI Provider Settings */}
           {currentProject && (
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">AI Provider</h3>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Provider</h3>
+                {hasStoredApiKey ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2.5 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                    Configured ({storedProvider})
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2.5 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                    API key not set
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Choose the AI model used for chat in{' '}
+                Configure the AI model for{' '}
                 <span className="font-medium text-gray-700 dark:text-gray-300">{currentProject.name}</span>.
-                API keys must be configured on the server.
+                Your API key is stored per project and used for all chat requests.
               </p>
               <div className="space-y-4">
                 <div>
@@ -179,7 +209,7 @@ export default function SettingsPage() {
                   </label>
                   <select
                     value={llmModel}
-                    onChange={(e) => { setLlmModel(e.target.value); setLlmSaved(false); }}
+                    onChange={(e) => setLlmModel(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   >
                     <option value="">Use provider default</option>
@@ -190,17 +220,47 @@ export default function SettingsPage() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    API Key
+                    {hasStoredApiKey && storedProvider === llmProvider && (
+                      <span className="ml-2 text-xs text-gray-400 dark:text-gray-500 font-normal">
+                        (leave blank to keep existing key)
+                      </span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiKey ? 'text' : 'password'}
+                      value={llmApiKey}
+                      onChange={(e) => setLlmApiKey(e.target.value)}
+                      placeholder={
+                        hasStoredApiKey && storedProvider === llmProvider
+                          ? '••••••••••••••••••••'
+                          : API_KEY_PLACEHOLDERS[llmProvider] || 'Enter API key'
+                      }
+                      className="w-full px-3 py-2 pr-20 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white dark:placeholder-gray-500 font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                    >
+                      {showApiKey ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                    Your key is stored in the project and never exposed in the UI after saving.
+                  </p>
+                </div>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleSaveLlmSettings}
                     disabled={llmSaving}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {llmSaving ? 'Saving…' : 'Save'}
+                    {llmSaving ? 'Saving…' : 'Save AI Settings'}
                   </button>
-                  {llmSaved && (
-                    <span className="text-sm text-green-600 dark:text-green-400">Saved!</span>
-                  )}
                 </div>
               </div>
             </div>
