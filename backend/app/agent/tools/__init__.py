@@ -15,6 +15,7 @@ from app.agent.tools.plan_tools import (
     ProposePlanTool,
     ConfirmPlanTool,
 )
+from app.agent.tools.slack_tools import ListSlackChannelsTool, SendSlackMessageTool
 
 __all__ = [
     "BaseTool",
@@ -29,4 +30,6 @@ __all__ = [
     "DeleteTaskTool",
     "ProposePlanTool",
     "ConfirmPlanTool",
+    "ListSlackChannelsTool",
+    "SendSlackMessageTool",
 ]

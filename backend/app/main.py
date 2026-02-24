@@ -63,8 +63,6 @@ async def healthz() -> dict:
     """Extended health check with environment info."""
     return {"status": "ok", "environment": settings.environment}
 
-# Additional routers (commented out for now, will add as we implement)
-# from app.api.routes import teams, integrations
-# app.include_router(teams.router, prefix="/teams", tags=["teams"])
-# app.include_router(integrations.router, prefix="/integrations", tags=["integrations"])
+from app.api.routes import integrations
+app.include_router(integrations.router, prefix="/integrations", tags=["integrations"])
 
