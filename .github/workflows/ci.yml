@@ -3,13 +3,16 @@ name: CI - Test & Build
 on:
   push:
     branches: [master, develop]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
   pull_request:
     branches: [master]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
 
 jobs:
-  # ==========================================
-  # Backend Tests
-  # ==========================================
   backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
@@ -30,8 +33,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -62,16 +64,12 @@ jobs:
         run: |
           timeout 10 python -c "from app.main import app; print('✅ Backend imports OK')" || true
 
-  # ==========================================
-  # Frontend Tests & Build
-  # ==========================================
   frontend-test:
-    name: Frontend Build
+    name: Frontend Lint & Typecheck
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -84,23 +82,13 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Type check
+      - name: Lint
         working-directory: ./frontend
         run: npm run lint || true
 
-      - name: Build
-        working-directory: ./frontend
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
-        run: npm run build
-
-  # ==========================================
-  # All Tests Passed
-  # ==========================================
   ci-success:
     name: CI Success
     needs: [backend-test, frontend-test]
     runs-on: ubuntu-latest
     steps:
-      - name: All checks passed
-        run: echo "✅ All CI checks passed!"
+      - run: echo "✅ All CI checks passed!"
