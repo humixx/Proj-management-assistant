@@ -41,7 +41,10 @@ from app.schemas.plan import (
     PlanResponse,
 )
 from app.schemas.integration import (
+    SlackSetupRequest,
     SlackConnectRequest,
+    SlackOAuthURLResponse,
+    SlackSetDefaultChannelRequest,
     SlackChannel,
     SlackChannelList,
     SlackIntegrationResponse,
@@ -86,7 +89,10 @@ __all__ = [
     "AuthResponse",
     "UserResponse",
     # Integration
+    "SlackSetupRequest",
     "SlackConnectRequest",
+    "SlackOAuthURLResponse",
+    "SlackSetDefaultChannelRequest",
     "SlackChannel",
     "SlackChannelList",
     "SlackIntegrationResponse",

@@ -59,6 +59,19 @@ class TaskRepository(BaseRepository):
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
     
+    async def get_by_external_id(
+        self,
+        external_id: str,
+        project_id: UUID,
+    ) -> Optional[Task]:
+        """Get a task by its Slack external_id (channel:ts) within a project."""
+        stmt = select(Task).where(
+            Task.external_id == external_id,
+            Task.project_id == project_id,
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def list_by_project(
         self,
         project_id: UUID,

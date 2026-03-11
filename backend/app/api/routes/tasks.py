@@ -1,4 +1,6 @@
 """Task API routes."""
+import asyncio
+import logging
 from typing import Optional
 from uuid import UUID
 
@@ -17,6 +19,9 @@ from app.schemas import (
     BulkTaskCreate,
     BulkTaskResponse,
 )
+from app.services.slack_task_sync import SlackTaskSync
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -32,6 +37,10 @@ async def create_task(
     await verify_project_ownership(project_id, current_user.id, db)
     repo = TaskRepository(db)
     task = await repo.create(project_id, data)
+
+    # Fire-and-forget Slack sync (don't block the response)
+    asyncio.ensure_future(_sync_task_background(task, project_id, db))
+
     return task
 
 
@@ -46,6 +55,10 @@ async def bulk_create_tasks(
     await verify_project_ownership(project_id, current_user.id, db)
     repo = TaskRepository(db)
     tasks = await repo.bulk_create(project_id, data.tasks)
+
+    # Fire-and-forget Slack sync for all tasks
+    asyncio.ensure_future(_sync_tasks_background(tasks, project_id, db))
+
     return BulkTaskResponse(created=tasks, count=len(tasks))
 
 
@@ -124,3 +137,27 @@ async def delete_task(
         )
     await verify_project_ownership(task.project_id, current_user.id, db)
     await repo.delete(task_id)
+
+
+# ── Slack sync background helpers ───────────────────────────────────
+
+
+async def _sync_task_background(task, project_id: UUID, db: AsyncSession) -> None:
+    """Sync a single task to Slack in the background."""
+    try:
+        sync = SlackTaskSync(db)
+        external_id = await sync.sync_task_to_slack(task, project_id)
+        if external_id:
+            task.external_id = external_id
+            await db.commit()
+    except Exception:
+        logger.exception("Background Slack sync failed for task %s", task.id)
+
+
+async def _sync_tasks_background(tasks: list, project_id: UUID, db: AsyncSession) -> None:
+    """Sync multiple tasks to Slack in the background."""
+    try:
+        sync = SlackTaskSync(db)
+        await sync.sync_tasks_to_slack(tasks, project_id)
+    except Exception:
+        logger.exception("Background Slack bulk sync failed for project %s", project_id)

@@ -10,13 +10,8 @@ export function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
   const isLandingPage = pathname === '/';
 
-  // Landing page is always accessible (handled by page component)
+  // Landing page is always accessible — client-side handles redirect to dashboard if authenticated
   if (isLandingPage) {
-    // If authenticated, redirect to dashboard (handled by page component, but middleware can help)
-    if (token) {
-      const dashboardUrl = new URL('/dashboard', request.url);
-      return NextResponse.redirect(dashboardUrl);
-    }
     return NextResponse.next();
   }
 

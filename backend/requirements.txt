@@ -35,9 +35,10 @@ pgvector==0.2.4
 # Slack integration
 slack-sdk==3.26.2
 
-# Authentication
+# Authentication & Encryption
 bcrypt==4.2.1
 python-jose[cryptography]==3.3.0
+cryptography>=42.0.0
 
 # Utilities
 httpx==0.26.0

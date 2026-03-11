@@ -1,41 +1,15 @@
-name: Deploy to EC2
+name: Deploy Backend to EC2
 
 on:
   push:
     branches: [master]
+    paths:
+      - 'backend/**'
   workflow_dispatch:
 
 jobs:
-  # ==========================================
-  # Build & Test
-  # ==========================================
-  build:
-    name: Build & Test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Build Frontend
-        working-directory: ./frontend
-        run: |
-          npm ci
-          npm run build
-        env:
-          NEXT_PUBLIC_API_URL: http://54.209.95.229:8000
-
-  # ==========================================
-  # Deploy to EC2
-  # ==========================================
   deploy:
-    name: Deploy to EC2
-    needs: build
+    name: Deploy Backend to EC2
     runs-on: ubuntu-latest
 
     steps:
@@ -48,12 +22,11 @@ jobs:
           command_timeout: 30m
           script: |
             set -e
-            echo "📁 Navigating to project directory..."
             cd /var/www/Proj-management-assistant
 
             echo "🧹 Resetting local changes..."
             git reset --hard HEAD
-            git clean -fd -e node_modules -e backend/venv -e .next
+            git clean -fd -e backend/venv
 
             echo "📥 Pulling latest code..."
             git pull origin master
@@ -66,23 +39,12 @@ jobs:
             echo "🗄️ Running migrations..."
             alembic upgrade head || echo "No new migrations"
 
-            echo "⚛️ Updating frontend..."
-            cd ../frontend
-            export NODE_OPTIONS="--max-old-space-size=512"
-            rm -rf node_modules .next
-            npm ci --silent
-
-            echo "🔨 Building frontend..."
-            npm run build
-
-            echo "🔄 Restarting services..."
+            echo "🔄 Restarting service..."
             sudo systemctl restart Proj-management-assistant-api
-            sudo systemctl restart Proj-management-assistant-web
 
-            echo "✅ Deployment complete!"
-
+            echo "✅ Backend deployment complete!"
 
       - name: Verify deployment
         run: |
           sleep 10
-          curl -s http://${{ secrets.EC2_HOST }}:8000/health && echo "✅ Deployed!" || echo "⚠️ Check deployment"
+          curl -s http://${{ secrets.EC2_HOST }}:8000/health && echo "✅ Backend healthy!" || echo "⚠️ Check deployment"

@@ -17,6 +17,8 @@ from app.agent.tools import (
     DeleteTaskTool,
     ProposePlanTool,
     ConfirmPlanTool,
+    ListSlackChannelsTool,
+    SendSlackMessageTool,
 )
 from app.services.llm_service import get_llm_provider
 
@@ -59,6 +61,9 @@ class Agent:
         self.tools.register(DeleteTaskTool(self.db, self.project_id))
         self.tools.register(ProposePlanTool(self.db, self.project_id))
         self.tools.register(ConfirmPlanTool(self.db, self.project_id))
+        # Slack tools
+        self.tools.register(ListSlackChannelsTool(self.db, self.project_id))
+        self.tools.register(SendSlackMessageTool(self.db, self.project_id))
 
     async def run(self, user_message: str) -> dict:
         """

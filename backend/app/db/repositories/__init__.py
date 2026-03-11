@@ -6,6 +6,7 @@ from app.db.repositories.task_repo import TaskRepository
 from app.db.repositories.document_repo import DocumentRepository
 from app.db.repositories.chat_repo import ChatRepository
 from app.db.repositories.plan_repo import PlanRepository
+from app.db.repositories.integration_repo import IntegrationRepository
 
 __all__ = [
     "BaseRepository",
@@ -15,4 +16,5 @@ __all__ = [
     "DocumentRepository",
     "ChatRepository",
     "PlanRepository",
+    "IntegrationRepository",
 ]

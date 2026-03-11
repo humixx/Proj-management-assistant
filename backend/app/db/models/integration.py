@@ -15,7 +15,10 @@ class SlackIntegration(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, unique=True)
-    access_token = Column(String(500), nullable=False)
+    client_id = Column(String(255), nullable=True)
+    client_secret = Column(String(500), nullable=True)
+    access_token = Column(String(500), nullable=True)
+    bot_token = Column(String(500), nullable=True)
     team_id = Column(String(100), nullable=True)
     team_name = Column(String(255), nullable=True)
     channel_id = Column(String(100), nullable=True)

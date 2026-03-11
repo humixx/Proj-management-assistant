@@ -1,4 +1,6 @@
 """Task management tools for the agent."""
+import asyncio
+import logging
 from typing import Any, AsyncGenerator, Optional
 from uuid import UUID
 from datetime import date
@@ -8,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agent.tools.base import BaseTool
 from app.db.repositories import TaskRepository
 from app.schemas import TaskCreate, TaskUpdate
+from app.services.slack_task_sync import SlackTaskSync
+
+logger = logging.getLogger(__name__)
 
 
 class CreateTaskTool(BaseTool):
@@ -82,6 +87,11 @@ class CreateTaskTool(BaseTool):
         repo = TaskRepository(self.db)
         task = await repo.create(self.project_id, task_data)
 
+        # Sync to Slack (fire-and-forget)
+        asyncio.ensure_future(
+            _agent_sync_task_background(task, self.project_id, self.db)
+        )
+
         return {
             "success": True,
             "message": f"Task '{title}' created successfully.",
@@ -145,6 +155,11 @@ class BulkCreateTasksTool(BaseTool):
 
         repo = TaskRepository(self.db)
         created_tasks = await repo.bulk_create(self.project_id, task_creates)
+
+        # Sync to Slack (fire-and-forget)
+        asyncio.ensure_future(
+            _agent_sync_tasks_background(created_tasks, self.project_id, self.db)
+        )
 
         return {
             "success": True,
@@ -423,6 +438,11 @@ class ConfirmProposedTasksTool(BaseTool):
             }
             return
 
+        # Sync created tasks to Slack (fire-and-forget)
+        asyncio.ensure_future(
+            _agent_sync_tasks_background(created_tasks, self.project_id, self.db)
+        )
+
         msg = f"Created {len(created_tasks)} task(s) successfully."
         if skipped:
             msg += f" Skipped {len(skipped)} duplicate(s): {', '.join(skipped)}."
@@ -607,3 +627,27 @@ class DeleteTaskTool(BaseTool):
             "success": True,
             "message": f"Task '{task_title}' deleted successfully.",
         }
+
+
+# ── Slack sync background helpers (shared by all task tools) ────────
+
+
+async def _agent_sync_task_background(task, project_id: UUID, db: AsyncSession) -> None:
+    """Sync a single task to Slack in the background."""
+    try:
+        sync = SlackTaskSync(db)
+        external_id = await sync.sync_task_to_slack(task, project_id)
+        if external_id:
+            task.external_id = external_id
+            await db.commit()
+    except Exception:
+        logger.exception("Agent Slack sync failed for task %s", task.id)
+
+
+async def _agent_sync_tasks_background(tasks: list, project_id: UUID, db: AsyncSession) -> None:
+    """Sync multiple tasks to Slack in the background."""
+    try:
+        sync = SlackTaskSync(db)
+        await sync.sync_tasks_to_slack(tasks, project_id)
+    except Exception:
+        logger.exception("Agent Slack bulk sync failed for project %s", project_id)
