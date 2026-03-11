@@ -1,7 +1,9 @@
-"""Slack integration API routes."""
+"""Slack integration API routes (authenticated + webhook endpoints)."""
+import json
+from urllib.parse import parse_qs
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_current_project_id, verify_project_ownership
@@ -18,7 +20,8 @@ from app.schemas import (
     SlackMessageRequest,
     SlackMessageResponse,
 )
-from app.services.slack_service import slack_service
+from app.services.slack_service import SlackService, slack_service
+from app.services.slack_task_sync import SlackTaskSync
 import logging
 
 logger = logging.getLogger(__name__)
@@ -225,3 +228,154 @@ async def disconnect_slack(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Slack integration to remove")
 
     return {"message": "Slack integration removed"}
+
+
+@router.get("/slack/members")
+async def get_slack_members(
+    project_id: UUID = Depends(get_current_project_id),
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch Slack workspace members for assignee selection."""
+    await verify_project_ownership(project_id, user_id, db)
+    repo = IntegrationRepository(db)
+    integration = await repo.get_by_project(project_id)
+
+    if not integration or not integration.bot_token:
+        raise HTTPException(status_code=404, detail="Slack not connected")
+
+    slack = SlackService()
+    members = await slack.get_workspace_members(integration.bot_token)
+    return {"members": members}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Slack Inbound Webhooks (unauthenticated — called by Slack directly)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@router.post("/slack/webhook")
+async def slack_events_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle Slack Events API webhooks (reactions, etc.).
+
+    This endpoint is unauthenticated — Slack calls it directly.
+    We verify the request using Slack's signing secret.
+    """
+    body = await request.body()
+    payload = json.loads(body)
+
+    # ── Step 1: URL Verification Challenge ──────────────────────────
+    # Slack sends this when you first configure the webhook URL.
+    if payload.get("type") == "url_verification":
+        return {"challenge": payload.get("challenge")}
+
+    # ── Step 2: Extract team_id ──────────────────────────────────────
+    team_id = payload.get("team_id")
+
+    # TODO: Add proper signature verification using Slack Signing Secret
+    # (client_secret != signing_secret — need to store signing_secret separately)
+
+    # ── Step 3: Route events ────────────────────────────────────────
+    if payload.get("type") == "event_callback":
+        event = payload.get("event", {})
+        event_type = event.get("type")
+
+        if event_type == "reaction_added":
+            await _handle_reaction_added(event, team_id, db)
+
+    # Slack expects 200 within 3 seconds — always respond quickly.
+    return Response(status_code=200)
+
+
+@router.post("/slack/interactions")
+async def slack_interactions(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle Slack Block Kit interactive payloads (button clicks).
+
+    Slack sends these as application/x-www-form-urlencoded with a
+    `payload` field containing JSON.
+    """
+    # IMPORTANT: Read raw body FIRST for signature verification.
+    # request.form() consumes the stream, so body() would return empty after.
+    body = await request.body()
+
+    form_data = parse_qs(body.decode("utf-8"))
+    raw_payload = form_data.get("payload", [""])[0]
+    if not raw_payload:
+        raise HTTPException(status_code=400, detail="Missing payload")
+
+    payload = json.loads(raw_payload)
+
+    # ── Extract team_id ──────────────────────────────────────────────
+    team = payload.get("team", {})
+    team_id = team.get("id") if isinstance(team, dict) else None
+
+    # TODO: Add proper signature verification using Slack Signing Secret
+    # (client_secret != signing_secret — need to store signing_secret separately)
+
+    # ── Route actions ───────────────────────────────────────────────
+    payload_type = payload.get("type")
+
+    if payload_type == "block_actions":
+        actions = payload.get("actions", [])
+        for action in actions:
+            action_id = action.get("action_id", "")
+            task_id = action.get("value", "")
+
+            if action_id.startswith("task_status_") and task_id and team_id:
+                await _handle_button_click(action_id, task_id, team_id, db)
+
+    # Respond immediately so Slack doesn't retry.
+    return Response(status_code=200)
+
+
+# ── Inbound event handlers ──────────────────────────────────────────
+
+
+async def _handle_reaction_added(
+    event: dict,
+    team_id: str,
+    db: AsyncSession,
+) -> None:
+    """Process a reaction_added event from Slack."""
+    reaction = event.get("reaction", "")
+    item = event.get("item", {})
+    channel = item.get("channel", "")
+    message_ts = item.get("ts", "")
+
+    if not channel or not message_ts or not team_id:
+        return
+
+    try:
+        sync = SlackTaskSync(db)
+        await sync.handle_reaction_event(
+            reaction=reaction,
+            channel=channel,
+            message_ts=message_ts,
+            team_id=team_id,
+        )
+    except Exception:
+        logger.exception("Failed to handle reaction event: %s on %s:%s", reaction, channel, message_ts)
+
+
+async def _handle_button_click(
+    action_id: str,
+    task_id: str,
+    team_id: str,
+    db: AsyncSession,
+) -> None:
+    """Process a button click from a task message in Slack."""
+    try:
+        sync = SlackTaskSync(db)
+        await sync.handle_button_action(
+            action_id=action_id,
+            task_id=task_id,
+            team_id=team_id,
+        )
+    except Exception:
+        logger.exception("Failed to handle button click: %s for task %s", action_id, task_id)

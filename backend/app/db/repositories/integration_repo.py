@@ -144,6 +144,26 @@ class IntegrationRepository(BaseRepository):
         await self.db.refresh(integration)
         return _decrypt_integration(integration)
 
+    async def get_by_team_id(
+        self,
+        team_id: str,
+        decrypt: bool = True,
+    ) -> Optional[SlackIntegration]:
+        """Look up a Slack integration by Slack team (workspace) ID.
+
+        Used by inbound webhooks where we only know the Slack team_id.
+        """
+        query = (
+            select(SlackIntegration)
+            .where(SlackIntegration.team_id == team_id)
+            .order_by(SlackIntegration.updated_at.desc())
+        )
+        result = await self.db.execute(query)
+        integration = result.scalars().first()
+        if decrypt:
+            return _decrypt_integration(integration)
+        return integration
+
     async def delete_slack_integration(
         self,
         project_id: UUID
