@@ -20,6 +20,7 @@ from app.schemas import (
     ChatMessageResponse,
     ToolCallInfo,
 )
+from app.auth.encryption import decrypt_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,11 @@ async def send_message(
     try:
         project = await ProjectRepository(db).get_by_id(project_id)
         llm_config = (project.settings or {}) if project else {}
+        
+        # Decrypt API key if present
+        if llm_config.get("llm_api_key"):
+            llm_config = llm_config.copy()
+            llm_config["llm_api_key"] = decrypt_api_key(llm_config["llm_api_key"])
 
         agent = Agent(db, project_id, llm_config=llm_config)
         result = await agent.run(data.message)
@@ -117,6 +123,11 @@ async def send_message_stream(
     # Load llm_config before the generator (request-scoped session is valid here)
     project = await ProjectRepository(db).get_by_id(project_id)
     llm_config = (project.settings or {}) if project else {}
+    
+    # Decrypt API key if present
+    if llm_config.get("llm_api_key"):
+        llm_config = llm_config.copy()
+        llm_config["llm_api_key"] = decrypt_api_key(llm_config["llm_api_key"])
 
     async def event_stream():
         # Create a NEW session inside the generator so it stays alive
