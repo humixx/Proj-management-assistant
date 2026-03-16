@@ -1,4 +1,6 @@
 """Plan management tools for the agent."""
+import asyncio
+import logging
 from typing import Any, AsyncGenerator, Optional
 from uuid import UUID
 from datetime import date
@@ -8,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agent.tools.base import BaseTool
 from app.db.repositories import TaskRepository, PlanRepository
 from app.schemas import TaskCreate
+from app.services.slack_task_sync import SlackTaskSync
+
+logger = logging.getLogger(__name__)
 
 
 class ProposePlanTool(BaseTool):
@@ -189,6 +194,7 @@ class ConfirmPlanTool(BaseTool):
 
         # 3. Create each step as a subtask with order
         step_task_ids = []
+        created_tasks = [parent_task]
         skipped = []
 
         for i, step in enumerate(steps):
@@ -220,6 +226,7 @@ class ConfirmPlanTool(BaseTool):
             await self.db.refresh(task)
 
             step_task_ids.append(task.id)
+            created_tasks.append(task)
 
             yield {
                 "type": "plan_step_created",
@@ -242,6 +249,11 @@ class ConfirmPlanTool(BaseTool):
             step_order=[str(tid) for tid in step_task_ids],
         )
 
+        # 5. Sync to Slack (fire-and-forget)
+        asyncio.ensure_future(
+            _plan_sync_tasks_background(created_tasks, self.project_id, self.db)
+        )
+
         msg = f"Created plan '{goal}' with {len(step_task_ids)} step(s)."
         if skipped:
             msg += f" Skipped {len(skipped)} duplicate(s): {', '.join(skipped)}."
@@ -259,3 +271,13 @@ class ConfirmPlanTool(BaseTool):
                 ],
             },
         }
+
+# ── Slack sync background helpers ───────────────────────────────────
+
+async def _plan_sync_tasks_background(tasks: list, project_id: UUID, db: AsyncSession) -> None:
+    """Sync multiple tasks to Slack in the background."""
+    try:
+        sync = SlackTaskSync(db)
+        await sync.sync_tasks_to_slack(tasks, project_id)
+    except Exception:
+        logger.exception("Plan Slack bulk sync failed for project %s", project_id)
