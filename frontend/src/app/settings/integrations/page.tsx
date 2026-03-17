@@ -16,7 +16,64 @@ export default function IntegrationsPage() {
   const [channels, setChannels] = useState<SlackChannel[]>([]);
   const [loading, setLoading] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const [copied, setCopied] = useState(false);
   const addToast = useUIStore((s) => s.addToast);
+
+  const manifestJson = `{
+  "display_information": {
+    "name": "Project Assistant",
+    "description": "AI-powered project management assistant",
+    "background_color": "#28345c"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Project Assistant",
+      "always_online": true
+    }
+  },
+  "oauth_config": {
+    "redirect_urls": [
+      "https://pm.fiqros.org/settings/integrations"
+    ],
+    "scopes": {
+      "bot": [
+        "channels:history",
+        "channels:join",
+        "channels:read",
+        "chat:write",
+        "groups:read",
+        "im:read",
+        "mpim:read",
+        "reactions:read",
+        "users:read",
+        "users:read.email"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://pm.fiqros.org/api/integrations/slack/webhook",
+      "bot_events": [
+        "reaction_added"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://pm.fiqros.org/api/integrations/slack/interactions"
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}`;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(manifestJson);
+    setCopied(true);
+    addToast('success', 'Manifest copied to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
 
   const fetchStatus = async () => {
     try {
@@ -209,40 +266,80 @@ export default function IntegrationsPage() {
 
           {/* Credentials / Setup */}
           {!isConnected && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold mb-1">Setup</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Enter your Slack App&apos;s Client ID and Client Secret. Each project can have its own Slack app.
-              </p>
-              <form onSubmit={handleSaveCredentials} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client ID</label>
-                  <input
-                    type="text"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    placeholder="e.g. 1234567890.1234567890"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  />
+            <div className="space-y-6">
+              {/* Step 1: Manifest */}
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold mb-1">Step 1: Create Slack App</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Copy the manifest below, go to <a href="https://api.slack.com/apps" target="_blank" rel="noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">api.slack.com/apps</a>, click <strong>Create New App</strong>, then select <strong>From an app manifest</strong>. Paste this code to instantly configure all required permissions and webhooks to point to the pm.fiqros.org servers.
+                </p>
+                
+                <div className="relative mt-4 mb-4">
+                  <button
+                    onClick={copyToClipboard}
+                    className="absolute top-2 right-2 p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 shadow-sm"
+                  >
+                    {copied ? (
+                      <>
+                        <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copy JSON
+                      </>
+                    )}
+                  </button>
+                  <pre className="bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg p-4 overflow-x-auto text-xs text-gray-800 dark:text-gray-300">
+                    <code>{manifestJson}</code>
+                  </pre>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Secret</label>
-                  <input
-                    type="password"
-                    value={clientSecret}
-                    onChange={(e) => setClientSecret(e.target.value)}
-                    placeholder="Paste your client secret"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading || !clientId.trim() || !clientSecret.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Saving...' : 'Save & Connect to Slack'}
-                </button>
-              </form>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  After creating the app, click <strong>Install to Workspace</strong> on the left sidebar.
+                </p>
+              </div>
+
+              {/* Step 2: Credentials */}
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold mb-1">Step 2: Connect Credentials</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  In your new Slack App, go to <strong>Basic Information</strong>. Scroll down to <strong>App Credentials</strong>, and copy the Client ID and Client Secret here.
+                </p>
+                <form onSubmit={handleSaveCredentials} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client ID</label>
+                    <input
+                      type="text"
+                      value={clientId}
+                      onChange={(e) => setClientId(e.target.value)}
+                      placeholder="e.g. 1234567890.1234567890"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client Secret</label>
+                    <input
+                      type="password"
+                      value={clientSecret}
+                      onChange={(e) => setClientSecret(e.target.value)}
+                      placeholder="Paste your client secret"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading || !clientId.trim() || !clientSecret.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Saving...' : 'Save & Connect to Slack'}
+                  </button>
+                </form>
+              </div>
             </div>
           )}
 
