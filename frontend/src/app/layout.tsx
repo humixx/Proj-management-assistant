@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import ToastContainer from '@/components/ui/ToastContainer';
 import ThemeProvider from '@/components/providers/ThemeProvider';
+import FloatingThemeToggle from '@/components/ui/FloatingThemeToggle';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,6 +22,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           {children}
+          <FloatingThemeToggle />
           <ToastContainer />
         </ThemeProvider>
       </body>
