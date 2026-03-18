@@ -61,7 +61,7 @@ export default function SettingsPage() {
       setLlmModel(currentProject.settings?.llm_model || '');
       setLlmApiKey(currentProject.settings?.llm_api_key || '');
     }
-  }, [currentProject?.id]);
+  }, [currentProject]);
 
   // Reset model and API key when provider changes
   const handleProviderChange = (provider: string) => {

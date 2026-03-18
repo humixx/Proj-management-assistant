@@ -107,7 +107,7 @@ export default function IntegrationsPage() {
         }
       })();
     }
-  }, []);
+  }, [addToast]);
 
   const handleSaveCredentials = async (e: React.FormEvent) => {
     e.preventDefault();

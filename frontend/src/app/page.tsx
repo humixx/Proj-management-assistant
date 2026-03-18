@@ -34,24 +34,7 @@ export default function LandingPage() {
               <h1 className="text-xl font-bold">PM Assistant</h1>
             </div>
             <div className="flex items-center gap-4">
-              {mounted && (
-                <button
-                  type="button"
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                  aria-label="Toggle color mode"
-                >
-                  {theme === 'dark' ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M8.05 8.05L6.636 6.636m0 10.728l1.414-1.414M17.95 8.05l1.414-1.414M12 7a5 5 0 100 10 5 5 0 000-10z" />
-                    </svg>
-                  )}
-                </button>
-              )}
+
               <Link
                 href="/login"
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -60,7 +43,7 @@ export default function LandingPage() {
               </Link>
               <Link
                 href="/register"
-                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 text-sm font-medium bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-all duration-300 transform hover:scale-105"
               >
                 Get Started
               </Link>
@@ -70,71 +53,97 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center py-20 sm:py-28">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 animate-fade-in">
-            AI-Powered Project Management
-          </h1>
-          <p className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto animate-fade-in-delay">
-            Streamline your projects with intelligent task management, document analysis, and team collaboration—all powered by AI.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-delay-2">
-            <Link
-              href="/register"
-              className="px-8 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
-            >
-              Start Free
-            </Link>
-            <Link
-              href="/login"
-              className="px-8 py-3 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-lg font-semibold rounded-lg border-2 border-gray-300 dark:border-gray-700 hover:border-blue-600 dark:hover:border-blue-400 transition-all"
-            >
-              Sign In
-            </Link>
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-hidden min-h-[90vh] flex flex-col justify-center">
+        {/* Subtle Minimalist Spotlight Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gray-300/30 dark:bg-white/5 rounded-full mix-blend-screen filter blur-[120px] opacity-70 animate-pulse" style={{ animationDuration: '6s' }}></div>
+        
+        {/* Prominent Grid Pattern Overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808033_1px,transparent_1px),linear-gradient(to_bottom,#80808033_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_70%_50%_at_50%_0%,#000_80%,transparent_100%)] pointer-events-none"></div>
+
+        {/* 3D Wireframe Holosphere */}
+        <div className="absolute top-1/2 left-1/2 w-[1100px] h-[1100px] -translate-x-1/2 -translate-y-1/2 [perspective:1400px] pointer-events-none z-0">
+          <div className="w-full h-full animate-[spin_30s_linear_infinite] [transform-style:preserve-3d]">
+            <div className="absolute inset-0 rounded-full border-[4px] border-blue-500/50 dark:border-blue-400/50 [transform:rotateX(75deg)_rotateY(0deg)] drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+            <div className="absolute inset-0 rounded-full border-[4px] border-purple-500/50 dark:border-purple-400/50 [transform:rotateX(75deg)_rotateY(45deg)] drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]"></div>
+            <div className="absolute inset-0 rounded-full border-[4px] border-cyan-500/50 dark:border-cyan-400/50 [transform:rotateX(75deg)_rotateY(90deg)] drop-shadow-[0_0_15px_rgba(6,182,212,0.5)]"></div>
+            <div className="absolute inset-0 rounded-full border-[4px] border-emerald-500/50 dark:border-emerald-400/50 [transform:rotateX(75deg)_rotateY(135deg)] drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
           </div>
         </div>
 
+        <div className="text-center py-20 sm:py-28 relative z-10 flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-8 rounded-full border border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-black/50 backdrop-blur-md text-xs font-semibold tracking-wider uppercase text-gray-600 dark:text-gray-400 opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-500 opacity-75 duration-1000"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-gray-400"></span>
+            </span>
+            Introducing PM Intelligence
+          </div>
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tighter mb-6 opacity-0 animate-[fadeIn_0.5s_ease-out_0.2s_forwards] text-black dark:text-white max-w-4xl mx-auto leading-tight">
+            Manage projects at the speed of thought.
+          </h1>
+          <p className="text-xl sm:text-2xl text-gray-500 dark:text-gray-400 mb-10 max-w-2xl mx-auto opacity-0 animate-[fadeIn_0.5s_ease-out_0.4s_forwards] font-light">
+            An AI-first workspace that deeply understands your team&apos;s workflow, documents, and tasks. No clutter, just focus.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center opacity-0 animate-[fadeIn_0.5s_ease-out_0.6s_forwards] w-full max-w-md">
+            <Link
+              href="/register"
+              className="w-full sm:w-auto px-8 py-3.5 bg-black dark:bg-white text-white dark:text-black text-lg font-medium rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition-all duration-300 transform hover:scale-105 shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+            >
+              Start Building
+            </Link>
+            <Link
+              href="/login"
+              className="w-full sm:w-auto px-8 py-3.5 bg-transparent text-gray-600 dark:text-gray-300 text-lg font-medium hover:text-black dark:hover:text-white transition-all duration-300 flex items-center justify-center gap-2 group"
+            >
+              Sign In
+              <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </Link>
+          </div>
+        </div>
         {/* Features Section */}
-        <div className="py-20 sm:py-28">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">
+        <div className="pt-8 pb-16 sm:pt-12 sm:pb-20 relative z-10 w-full">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-10">
             Everything you need to manage projects
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all transform hover:-translate-y-1">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            <div className="bg-transparent rounded-2xl p-8 border border-gray-200 dark:border-gray-800 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)] hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all duration-500 group relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-100/50 to-transparent dark:from-blue-500/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-6 text-black dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 border border-gray-200 dark:border-gray-800 group-hover:border-blue-200 dark:group-hover:border-blue-800 bg-white dark:bg-black group-hover:bg-blue-50 dark:group-hover:bg-blue-900/40 relative z-10 group-hover:scale-110 transition-all duration-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">AI Assistant</h3>
-              <p className="text-gray-600 dark:text-gray-300">
+              <h3 className="text-xl font-medium tracking-tight mb-3 text-black dark:text-white relative z-10">AI Assistant</h3>
+              <p className="text-gray-500 dark:text-gray-400 font-light leading-relaxed relative z-10">
                 Chat with an intelligent AI that helps you create tasks, analyze documents, and manage your projects effortlessly.
               </p>
             </div>
 
             {/* Feature 2 */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all transform hover:-translate-y-1">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            <div className="bg-transparent rounded-2xl p-8 border border-gray-200 dark:border-gray-800 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-[0_0_30px_-5px_rgba(16,185,129,0.3)] hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-all duration-500 group relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/50 to-transparent dark:from-emerald-500/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-6 text-black dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 border border-gray-200 dark:border-gray-800 group-hover:border-emerald-200 dark:group-hover:border-emerald-800 bg-white dark:bg-black group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/40 relative z-10 group-hover:scale-110 transition-all duration-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Smart Task Management</h3>
-              <p className="text-gray-600 dark:text-gray-300">
+              <h3 className="text-xl font-medium tracking-tight mb-3 text-black dark:text-white relative z-10">Smart Task Management</h3>
+              <p className="text-gray-500 dark:text-gray-400 font-light leading-relaxed relative z-10">
                 Organize tasks with Kanban boards, priorities, and AI-powered suggestions to keep your team productive.
               </p>
             </div>
 
             {/* Feature 3 */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all transform hover:-translate-y-1">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <div className="bg-transparent rounded-2xl p-8 border border-gray-200 dark:border-gray-800 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.3)] hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-all duration-500 group relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-100/50 to-transparent dark:from-purple-500/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-6 text-black dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 border border-gray-200 dark:border-gray-800 group-hover:border-purple-200 dark:group-hover:border-purple-800 bg-white dark:bg-black group-hover:bg-purple-50 dark:group-hover:bg-purple-900/40 relative z-10 group-hover:scale-110 transition-all duration-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Document Intelligence</h3>
-              <p className="text-gray-600 dark:text-gray-300">
+              <h3 className="text-xl font-medium tracking-tight mb-3 text-black dark:text-white relative z-10">Document Intelligence</h3>
+              <p className="text-gray-500 dark:text-gray-400 font-light leading-relaxed relative z-10">
                 Upload documents and let AI analyze them, extract insights, and answer questions about your project files.
               </p>
             </div>
@@ -142,20 +151,23 @@ export default function LandingPage() {
         </div>
 
         {/* CTA Section */}
-        <div className="py-20 sm:py-28 text-center">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-2xl p-12 text-white">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Ready to transform your project management?
-            </h2>
-            <p className="text-xl mb-8 text-blue-100">
-              Join teams already using AI to streamline their workflow.
-            </p>
-            <Link
-              href="/register"
-              className="inline-block px-8 py-3 bg-white text-blue-600 text-lg font-semibold rounded-lg hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg"
-            >
-              Get Started Free
-            </Link>
+        <div className="pt-8 pb-32 sm:pt-12 sm:pb-32 text-center w-full">
+          <div className="bg-black dark:bg-white rounded-[2.5rem] p-16 text-white dark:text-black shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-800 to-transparent dark:from-gray-200 opacity-50 pointer-events-none"></div>
+            <div className="relative z-10">
+              <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-6">
+                Ready to transform your workflow?
+              </h2>
+              <p className="text-xl mb-10 text-gray-400 dark:text-gray-600 font-light max-w-2xl mx-auto">
+                Join teams already using AI to streamline their project management.
+              </p>
+              <Link
+                href="/register"
+                className="inline-block px-10 py-4 bg-white dark:bg-black text-black dark:text-white text-lg font-medium rounded-full hover:scale-105 transition-all duration-300"
+              >
+                Get Started Free
+              </Link>
+            </div>
           </div>
         </div>
       </main>
