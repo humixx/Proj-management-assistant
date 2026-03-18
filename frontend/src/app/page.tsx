@@ -82,7 +82,7 @@ export default function LandingPage() {
             Manage projects at the speed of thought.
           </h1>
           <p className="text-xl sm:text-2xl text-gray-500 dark:text-gray-400 mb-10 max-w-2xl mx-auto opacity-0 animate-[fadeIn_0.5s_ease-out_0.4s_forwards] font-light">
-            An AI-first workspace that deeply understands your team's workflow, documents, and tasks. No clutter, just focus.
+            An AI-first workspace that deeply understands your team&apos;s workflow, documents, and tasks. No clutter, just focus.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center opacity-0 animate-[fadeIn_0.5s_ease-out_0.6s_forwards] w-full max-w-md">
             <Link
