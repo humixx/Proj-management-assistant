@@ -25,6 +25,7 @@ export default function Dashboard() {
   const { notes, setNotes } = useNotesStore();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
   const [teamMemberCount, setTeamMemberCount] = useState(0);
   const [pendingTasksCount, setPendingTasksCount] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -41,8 +42,12 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const loadDashboardData = async () => {
-      setIsLoading(true);
+    const loadDashboardData = async (isBackground = false) => {
+      if (!isBackground) {
+        setIsLoading(true);
+      } else {
+        setIsRefetching(true);
+      }
       try {
         await fetchProjects();
         
@@ -129,11 +134,18 @@ export default function Dashboard() {
         console.error('Error loading dashboard data:', error);
       } finally {
         setIsLoading(false);
+        setIsRefetching(false);
       }
     };
     
     if (isAuthenticated) {
       loadDashboardData();
+      
+      const interval = setInterval(() => {
+        loadDashboardData(true);
+      }, 15000);
+      
+      return () => clearInterval(interval);
     }
   }, [fetchProjects, isAuthenticated]);
 
@@ -148,42 +160,25 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <div className="mb-6 sm:mb-8 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
-              Welcome Back{user?.name ? `, ${user.name}` : ''}
-            </h2>
-            <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300">
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
+                Welcome Back{user?.name ? `, ${user.name}` : ''}
+              </h2>
+              {/* Live Indicator */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-full shadow-sm" title={isRefetching ? "Refreshing..." : "Live updates active"}>
+                <span className="relative flex h-2 w-2">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 ${isRefetching ? 'duration-75' : 'duration-1000'}`}></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="text-xs font-medium text-green-700 dark:text-green-400 uppercase tracking-wider">Live</span>
+              </div>
+            </div>
+            <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 transition-opacity duration-300">
               Your AI-powered project management dashboard
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {mounted && (
-              <button
-                type="button"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm"
-                aria-label="Toggle color mode"
-              >
-                {theme === 'dark' ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
-                    />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M8.05 8.05L6.636 6.636m0 10.728l1.414-1.414M17.95 8.05l1.414-1.414M12 7a5 5 0 100 10 5 5 0 000-10z"
-                    />
-                  </svg>
-                )}
-              </button>
-            )}
+
             <button
               onClick={() => {
                 logout();
@@ -202,7 +197,7 @@ export default function Dashboard() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Active Projects</p>
@@ -228,7 +223,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Team Members</p>
@@ -254,7 +249,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Pending Tasks</p>
@@ -385,7 +380,7 @@ export default function Dashboard() {
               {activities.map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex items-start p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700"
+                  className="flex items-start p-4 bg-gray-50 dark:bg-gray-800 rounded-lg transition-all duration-300 transform hover:shadow-md hover:-translate-y-0.5 hover:bg-white dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                 >
                   <div className={`p-2 rounded-lg mr-4 ${
                     activity.type === 'task' ? 'bg-yellow-100' :
