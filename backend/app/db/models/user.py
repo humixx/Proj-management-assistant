@@ -21,3 +21,4 @@ class User(Base):
 
     # Relationships
     projects = relationship("Project", back_populates="user")
+    subscription = relationship("Subscription", back_populates="user", uselist=False, cascade="all, delete-orphan")
