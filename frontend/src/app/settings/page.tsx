@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useProjectStore } from '@/lib/stores';
 import { useToast } from '@/lib/stores/uiStore';
 import { projectsApi } from '@/lib/api';
+import { billingApi, BillingStatus } from '@/lib/api/billing';
 import SlackStatusCard from '@/components/settings/SlackStatusCard';
 
 const LLM_PROVIDERS = [
@@ -36,6 +37,8 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const toast = useToast();
   const [mounted, setMounted] = useState(false);
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
   const backHref = currentProject ? `/projects/${currentProject.id}/chat` : '/';
 
   // AI Provider state
@@ -53,6 +56,26 @@ export default function SettingsPage() {
   const [llmValidating, setLlmValidating] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    billingApi.status().then(setBilling).catch(() => {});
+  }, []);
+
+  const trialDaysLeft = billing?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(billing.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
+  const handleOpenPortal = async () => {
+    setPortalLoading(true);
+    try {
+      const res = await billingApi.portal();
+      if (res.portal_url) window.open(res.portal_url, '_blank');
+    } catch {
+      toast.warning('Complete checkout first to access billing management.');
+    } finally {
+      setPortalLoading(false);
+    }
+  };
 
   // Sync state when project changes
   useEffect(() => {
@@ -327,6 +350,49 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-3">
               <SlackStatusCard />
+            </div>
+          </div>
+
+          {/* Billing & Subscription */}
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex justify-between items-center mb-1">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Billing & Subscription</h3>
+              {billing && (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                  billing.is_active
+                    ? billing.is_trialing
+                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                      : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    billing.is_active
+                      ? billing.is_trialing ? 'bg-blue-500 animate-pulse' : 'bg-green-500'
+                      : 'bg-gray-400'
+                  }`} />
+                  {billing.is_trialing ? `Trial — ${trialDaysLeft}d left` : billing.is_active ? 'Pro Active' : 'Free'}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Manage your subscription, update payment methods, or change plans.
+            </p>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/pricing"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+              >
+                {billing?.is_active && !billing?.is_trialing ? 'View Plans' : 'Upgrade to Pro'}
+              </Link>
+              {billing?.subscription?.provider && (
+                <button
+                  onClick={handleOpenPortal}
+                  disabled={portalLoading}
+                  className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-sm disabled:opacity-50"
+                >
+                  {portalLoading ? 'Opening...' : 'Manage Billing'}
+                </button>
+              )}
             </div>
           </div>
 

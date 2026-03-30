@@ -7,6 +7,7 @@ from app.db.repositories.document_repo import DocumentRepository
 from app.db.repositories.chat_repo import ChatRepository
 from app.db.repositories.plan_repo import PlanRepository
 from app.db.repositories.integration_repo import IntegrationRepository
+from app.db.repositories.subscription_repo import SubscriptionRepository
 
 __all__ = [
     "BaseRepository",
@@ -17,4 +18,6 @@ __all__ = [
     "ChatRepository",
     "PlanRepository",
     "IntegrationRepository",
+    "SubscriptionRepository",
 ]
+

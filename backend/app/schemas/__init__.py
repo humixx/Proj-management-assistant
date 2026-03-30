@@ -51,6 +51,13 @@ from app.schemas.integration import (
     SlackMessageRequest,
     SlackMessageResponse,
 )
+from app.schemas.billing import (
+    SubscriptionResponse,
+    CheckoutRequest,
+    CheckoutResponse,
+    CustomerPortalResponse,
+    BillingStatusResponse,
+)
 
 __all__ = [
     # Project
@@ -98,4 +105,10 @@ __all__ = [
     "SlackIntegrationResponse",
     "SlackMessageRequest",
     "SlackMessageResponse",
+    # Billing
+    "SubscriptionResponse",
+    "CheckoutRequest",
+    "CheckoutResponse",
+    "CustomerPortalResponse",
+    "BillingStatusResponse",
 ]

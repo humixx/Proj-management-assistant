@@ -35,6 +35,10 @@ pgvector==0.2.4
 # Slack integration
 slack-sdk==3.26.2
 
+# Payment providers
+stripe>=8.0.0
+paddle-python-sdk>=1.0.0
+
 # Authentication & Encryption
 bcrypt==4.2.1
 python-jose[cryptography]==3.3.0

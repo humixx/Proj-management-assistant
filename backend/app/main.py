@@ -66,3 +66,6 @@ async def healthz() -> dict:
 from app.api.routes import integrations
 app.include_router(integrations.router, prefix="/integrations", tags=["integrations"])
 
+from app.api.routes import billing
+app.include_router(billing.router, prefix="/billing", tags=["billing"])
+

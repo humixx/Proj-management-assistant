@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     SLACK_CLIENT_ID: str = ""
     SLACK_CLIENT_SECRET: str = ""
 
+    # Payment Providers
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_PUBLISHABLE_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    PADDLE_API_KEY: str = ""
+    PADDLE_WEBHOOK_SECRET: str = ""
+    PADDLE_ENVIRONMENT: str = "sandbox"  # "sandbox" or "production"
+
     # JWT Authentication
     JWT_SECRET_KEY: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
