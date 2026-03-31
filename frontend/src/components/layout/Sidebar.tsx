@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useProjectStore, useAuthStore } from '@/lib/stores';
 import { Project } from '@/types';
 import { validateProjectName } from '@/utils/validators';
+import { billingApi, BillingStatus } from '@/lib/api/billing';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -16,6 +17,23 @@ export default function Sidebar() {
   const [newProjectName, setNewProjectName] = useState('');
   const [nameError, setNameError] = useState('');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
+
+  useEffect(() => {
+    if (user) billingApi.status().then(setBilling).catch(() => {});
+  }, [user]);
+
+  const planLabel = billing?.is_trialing
+    ? `Trial · ${Math.max(0, Math.ceil((new Date(billing.trial_ends_at!).getTime() - Date.now()) / 86400000))}d left`
+    : billing?.is_active
+      ? 'Pro'
+      : 'Free';
+
+  const planColor = billing?.is_trialing
+    ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+    : billing?.is_active
+      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+      : 'bg-gray-700/50 text-gray-400 border-gray-600/50';
 
   useEffect(() => {
     fetchProjects();
@@ -187,6 +205,19 @@ export default function Sidebar() {
       </div>
 
       <div className="p-4 border-t border-gray-700 space-y-2">
+        <Link
+          href="/pricing"
+          className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded-md border transition-colors hover:brightness-110 ${planColor}`}
+        >
+          <span>{planLabel}</span>
+          {!billing?.is_active || billing?.is_trialing ? (
+            <span className="text-[10px] opacity-70">Upgrade →</span>
+          ) : (
+            <svg className="w-3.5 h-3.5 opacity-70" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+          )}
+        </Link>
         <Link href="/settings" className="block px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 rounded-md">
           Settings
         </Link>
