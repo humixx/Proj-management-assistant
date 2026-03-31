@@ -69,3 +69,6 @@ app.include_router(integrations.router, prefix="/integrations", tags=["integrati
 from app.api.routes import billing
 app.include_router(billing.router, prefix="/billing", tags=["billing"])
 
+from app.api.routes import webhooks
+app.include_router(webhooks.router, prefix="/billing/webhooks", tags=["webhooks"])
+

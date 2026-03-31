@@ -86,20 +86,21 @@ async def _stripe_create_checkout(
     """Create a Stripe Checkout Session and return its URL + session ID.
 
     We use ``mode="subscription"`` so that Stripe manages the recurring
-    billing lifecycle for us.  The 7-day trial is configured on the
-    Price object in the Stripe Dashboard, not hard-coded here.
+    billing lifecycle for us.  The 7-day trial is configured via
+    ``subscription_data.trial_period_days``.
     """
     stripe = _get_stripe()
+
+    if not settings.STRIPE_PRICE_ID:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="STRIPE_PRICE_ID is not configured. Set it in .env.",
+        )
 
     session = stripe.checkout.Session.create(
         mode="subscription",
         customer_email=customer_email,
-        line_items=[
-            {
-                "price": settings.STRIPE_PRICE_ID if hasattr(settings, "STRIPE_PRICE_ID") and settings.STRIPE_PRICE_ID else None,
-                "quantity": 1,
-            }
-        ] if hasattr(settings, "STRIPE_PRICE_ID") and settings.STRIPE_PRICE_ID else [],
+        line_items=[{"price": settings.STRIPE_PRICE_ID, "quantity": 1}],
         success_url=success_url,
         cancel_url=cancel_url,
         subscription_data={"trial_period_days": 7},
@@ -144,22 +145,21 @@ async def _paddle_create_checkout(
         else "https://api.paddle.com"
     )
 
+    if not settings.PADDLE_PRICE_ID:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="PADDLE_PRICE_ID is not configured. Set it in .env.",
+        )
+
     headers = {
         "Authorization": f"Bearer {settings.PADDLE_API_KEY}",
         "Content-Type": "application/json",
     }
 
-    # Build the transaction payload
     payload: dict = {
-        "items": [],  # Will be populated when PADDLE_PRICE_ID is set
+        "items": [{"price_id": settings.PADDLE_PRICE_ID, "quantity": 1}],
         "checkout": {"url": success_url},
     }
-
-    # Add price item if configured
-    if hasattr(settings, "PADDLE_PRICE_ID") and settings.PADDLE_PRICE_ID:
-        payload["items"] = [
-            {"price_id": settings.PADDLE_PRICE_ID, "quantity": 1}
-        ]
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
