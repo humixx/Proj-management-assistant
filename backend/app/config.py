@@ -28,8 +28,10 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_PRICE_ID: str = ""        # Price ID from Stripe Dashboard (e.g. price_xxx)
     PADDLE_API_KEY: str = ""
     PADDLE_WEBHOOK_SECRET: str = ""
+    PADDLE_PRICE_ID: str = ""        # Price ID from Paddle Dashboard (e.g. pri_xxx)
     PADDLE_ENVIRONMENT: str = "sandbox"  # "sandbox" or "production"
 
     # JWT Authentication
