@@ -177,11 +177,19 @@ async def _paddle_create_checkout(
         data = response.json()
 
     transaction = data.get("data", {})
-    checkout_url = transaction.get("checkout", {}).get("url", "")
+    txn_id = transaction.get("id", "")
+
+    # Build the Paddle-hosted checkout URL from the transaction ID
+    checkout_base = (
+        "https://sandbox-checkout.paddle.com"
+        if settings.PADDLE_ENVIRONMENT == "sandbox"
+        else "https://checkout.paddle.com"
+    )
+    checkout_url = f"{checkout_base}/transactions/{txn_id}" if txn_id else ""
 
     return {
         "checkout_url": checkout_url,
-        "session_id": transaction.get("id"),
+        "session_id": txn_id,
         "provider": PaymentProvider.PADDLE.value,
     }
 
