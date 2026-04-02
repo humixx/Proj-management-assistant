@@ -63,9 +63,30 @@ export default function PricingPage() {
     load();
   }, []);
 
+  // Load Paddle.js for overlay checkout
+  useEffect(() => {
+    if (providers.some(p => p.id === 'paddle')) {
+      const existing = document.querySelector('script[src*="paddle.com"]');
+      if (!existing) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+        script.async = true;
+        script.onload = () => {
+          const env = 'sandbox'; // Match PADDLE_ENVIRONMENT
+          (window as any).Paddle?.Environment?.set?.(env);
+          (window as any).Paddle?.Setup?.({
+            seller: undefined, // Not needed for transaction-based checkout
+          });
+        };
+        document.head.appendChild(script);
+      }
+    }
+  }, [providers]);
+
   const handleCheckout = async () => {
     if (!selectedProvider) return;
     setCheckoutLoading(true);
+    setError('');
     try {
       const result = await billingApi.checkout(
         selectedProvider,
@@ -73,7 +94,17 @@ export default function PricingPage() {
         `${window.location.origin}/settings?billing=success`,
         `${window.location.origin}/pricing?billing=canceled`,
       );
-      if (result.checkout_url) {
+
+      if (selectedProvider === 'paddle' && result.session_id) {
+        // Open Paddle.js overlay with the transaction ID
+        (window as any).Paddle?.Checkout?.open({
+          transactionId: result.session_id,
+          settings: {
+            successUrl: `${window.location.origin}/settings?billing=success`,
+          },
+        });
+      } else if (result.checkout_url) {
+        // Stripe: redirect to hosted checkout page
         window.location.href = result.checkout_url;
       }
     } catch (err: any) {
