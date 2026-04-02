@@ -422,5 +422,11 @@ class BillingService:
         if _stripe_configured():
             providers.append({"id": "stripe", "name": "Stripe", "label": "Credit / Debit Card"})
         if _paddle_configured():
-            providers.append({"id": "paddle", "name": "Paddle", "label": "Credit / Debit Card (Global)"})
+            providers.append({
+                "id": "paddle",
+                "name": "Paddle",
+                "label": "Credit / Debit Card (Global)",
+                "client_token": settings.PADDLE_CLIENT_TOKEN,
+                "environment": settings.PADDLE_ENVIRONMENT,
+            })
         return providers

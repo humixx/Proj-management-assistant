@@ -65,17 +65,19 @@ export default function PricingPage() {
 
   // Load Paddle.js for overlay checkout
   useEffect(() => {
-    if (providers.some(p => p.id === 'paddle')) {
+    const paddleProvider = providers.find(p => p.id === 'paddle') as any;
+    if (paddleProvider?.client_token) {
       const existing = document.querySelector('script[src*="paddle.com"]');
       if (!existing) {
         const script = document.createElement('script');
         script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
         script.async = true;
         script.onload = () => {
-          const env = 'sandbox'; // Match PADDLE_ENVIRONMENT
-          (window as any).Paddle?.Environment?.set?.(env);
-          (window as any).Paddle?.Setup?.({
-            seller: undefined, // Not needed for transaction-based checkout
+          if (paddleProvider.environment === 'sandbox') {
+            (window as any).Paddle?.Environment?.set?.('sandbox');
+          }
+          (window as any).Paddle?.Initialize?.({
+            token: paddleProvider.client_token,
           });
         };
         document.head.appendChild(script);
