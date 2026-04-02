@@ -42,14 +42,21 @@ class Subscription(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
 
     # Provider info
-    provider = Column(SAEnum(PaymentProvider, name="payment_provider", create_constraint=True), nullable=True)
+    provider = Column(
+        SAEnum(PaymentProvider, name="payment_provider", create_constraint=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
     provider_customer_id = Column(String(255), nullable=True, index=True)
     provider_subscription_id = Column(String(255), nullable=True, index=True)
 
     # Plan details
-    plan_type = Column(SAEnum(PlanType, name="plan_type", create_constraint=True), nullable=False, server_default="free")
+    plan_type = Column(
+        SAEnum(PlanType, name="plan_type", create_constraint=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+        server_default="free",
+    )
     status = Column(
-        SAEnum(SubscriptionStatus, name="subscription_status", create_constraint=True),
+        SAEnum(SubscriptionStatus, name="subscription_status", create_constraint=True, values_callable=lambda e: [x.value for x in e]),
         nullable=False,
         server_default="trialing",
     )
