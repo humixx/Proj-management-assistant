@@ -159,6 +159,7 @@ async def _paddle_create_checkout(
     payload: dict = {
         "items": [{"price_id": settings.PADDLE_PRICE_ID, "quantity": 1}],
         "checkout": {"url": success_url},
+        "customer": {"email": customer_email},
     }
 
     async with httpx.AsyncClient() as client:
@@ -168,7 +169,11 @@ async def _paddle_create_checkout(
             headers=headers,
             timeout=15.0,
         )
-        response.raise_for_status()
+        if not response.is_success:
+            logger.error(
+                "Paddle API error %s: %s", response.status_code, response.text
+            )
+            response.raise_for_status()
         data = response.json()
 
     transaction = data.get("data", {})
