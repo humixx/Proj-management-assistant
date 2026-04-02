@@ -5,23 +5,30 @@ import Link from 'next/link';
 import { billingApi, BillingStatus, PaymentProvider } from '@/lib/api/billing';
 import { useProjectStore } from '@/lib/stores';
 
-const FEATURES_FREE = [
-  '1 Project',
-  '50 AI Messages / month',
-  'Basic Task Management',
-  'Document Upload (5 MB)',
-  'Community Support',
+interface Feature {
+  text: string;
+  limited?: boolean; // shown with a muted "limited" badge
+}
+
+const FEATURES_FREE: Feature[] = [
+  { text: '1 Project' },
+  { text: '50 AI Messages / month' },
+  { text: 'Basic Task Management' },
+  { text: 'Document Upload (5 MB)' },
+  { text: 'Slack Integration (1 channel)', limited: true },
+  { text: 'AI Model Selection (1 provider)', limited: true },
+  { text: 'Community Support' },
 ];
 
-const FEATURES_PRO = [
-  'Unlimited Projects',
-  'Unlimited AI Messages',
-  'Advanced Planning & Workflows',
-  'Document Upload (100 MB)',
-  'Slack Integration',
-  'Priority Support',
-  'Custom AI Model Selection',
-  'Team Collaboration',
+const FEATURES_PRO: Feature[] = [
+  { text: 'Unlimited Projects' },
+  { text: 'Unlimited AI Messages' },
+  { text: 'Advanced Planning & Workflows' },
+  { text: 'Document Upload (100 MB)' },
+  { text: 'Full Slack Integration' },
+  { text: 'All AI Model Providers' },
+  { text: 'Priority Support' },
+  { text: 'Team Collaboration' },
 ];
 
 export default function PricingPage() {
@@ -155,11 +162,18 @@ export default function PricingPage() {
             </div>
             <ul className="space-y-3 mb-8 flex-1">
               {FEATURES_FREE.map((f) => (
-                <li key={f} className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300">
-                  <svg className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <li key={f.text} className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300">
+                  <svg className={`w-5 h-5 flex-shrink-0 mt-0.5 ${f.limited ? 'text-amber-400 dark:text-amber-500' : 'text-gray-400 dark:text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  {f}
+                  <span className="flex items-center gap-2">
+                    {f.text}
+                    {f.limited && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                        Limited
+                      </span>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -195,11 +209,11 @@ export default function PricingPage() {
             </div>
             <ul className="space-y-3 mb-8 flex-1">
               {FEATURES_PRO.map((f) => (
-                <li key={f} className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-200">
+                <li key={f.text} className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-200">
                   <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  {f}
+                  {f.text}
                 </li>
               ))}
             </ul>
