@@ -130,6 +130,7 @@ async def _stripe_create_portal(customer_id: str, return_url: str) -> str:
 async def _paddle_create_checkout(
     customer_email: str,
     success_url: str,
+    user_id: str = "",
 ) -> dict:
     """Build a Paddle Checkout link using the Paddle Billing API.
 
@@ -160,6 +161,7 @@ async def _paddle_create_checkout(
         "items": [{"price_id": settings.PADDLE_PRICE_ID, "quantity": 1}],
         "checkout": {"url": success_url},
         "customer": {"email": customer_email},
+        "custom_data": {"app_user_id": user_id},
     }
 
     async with httpx.AsyncClient() as client:
@@ -297,6 +299,7 @@ class BillingService:
                 return await _paddle_create_checkout(
                     customer_email=user_email,
                     success_url=success_url,
+                    user_id=str(user_id),
                 )
         except HTTPException:
             raise
