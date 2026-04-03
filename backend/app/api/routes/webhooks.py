@@ -313,55 +313,33 @@ async def paddle_webhook(
         customer_id = data.get("customer_id", "")
         subscription_id = data.get("subscription_id", "") or data.get("id", "")
 
-        # Paddle may include customer email in different locations
-        customer_email = ""
-        # Check nested customer object
-        customer = data.get("customer", {}) or {}
-        customer_email = customer.get("email", "")
-        # Fallback: check billing_details
-        if not customer_email:
-            billing = data.get("billing_details", {}) or {}
-            customer_email = billing.get("email", "")
-        # Fallback: check checkout object
-        if not customer_email:
-            checkout = data.get("checkout", {}) or {}
-            customer_email = checkout.get("customer_email", "")
+        # PRIMARY: Use app_user_id from custom_data (set during checkout)
+        custom_data = data.get("custom_data", {}) or {}
+        app_user_id = custom_data.get("app_user_id", "")
 
         logger.info(
-            "transaction.completed — customer_id=%s, subscription_id=%s, email=%s",
-            customer_id, subscription_id, customer_email,
+            "transaction.completed — customer_id=%s, subscription_id=%s, app_user_id=%s",
+            customer_id, subscription_id, app_user_id,
         )
 
-        if customer_email:
+        user = None
+        if app_user_id:
+            # Direct lookup by user ID — most reliable
+            from uuid import UUID as PyUUID
             from app.db.repositories.user_repo import UserRepository
 
             user_repo = UserRepository(db)
-            user = await user_repo.get_by_email(customer_email)
+            try:
+                user = await user_repo.get_by_id(PyUUID(app_user_id))
+            except (ValueError, Exception) as e:
+                logger.warning("Failed to lookup user by app_user_id=%s: %s", app_user_id, e)
 
-            if user:
-                await repo.activate(
-                    user_id=user.id,
-                    provider=PaymentProvider.PADDLE,
-                    provider_customer_id=customer_id,
-                    provider_subscription_id=subscription_id or customer_id,
-                )
-                logger.info(
-                    "Activated subscription for user %s (paddle sub %s)",
-                    user.id,
-                    subscription_id or customer_id,
-                )
-            else:
-                logger.warning("No user found for Paddle customer email: %s", customer_email)
-        else:
-            logger.warning(
-                "No customer email in Paddle transaction.completed event. "
-                "customer_id=%s — attempting lookup via Paddle API.",
-                customer_id,
-            )
-            # Try to fetch customer email from Paddle API
-            if customer_id:
+        # FALLBACK: Try email matching
+        if not user:
+            customer_email = (data.get("customer", {}) or {}).get("email", "")
+            if not customer_email:
+                # Fetch from Paddle API
                 import httpx
-
                 base_url = (
                     "https://sandbox-api.paddle.com"
                     if settings.PADDLE_ENVIRONMENT == "sandbox"
@@ -375,28 +353,33 @@ async def paddle_webhook(
                             timeout=10.0,
                         )
                         if resp.is_success:
-                            cust_data = resp.json().get("data", {})
-                            customer_email = cust_data.get("email", "")
-                            logger.info("Fetched customer email from Paddle: %s", customer_email)
-
-                            if customer_email:
-                                from app.db.repositories.user_repo import UserRepository
-
-                                user_repo = UserRepository(db)
-                                user = await user_repo.get_by_email(customer_email)
-                                if user:
-                                    await repo.activate(
-                                        user_id=user.id,
-                                        provider=PaymentProvider.PADDLE,
-                                        provider_customer_id=customer_id,
-                                        provider_subscription_id=subscription_id or customer_id,
-                                    )
-                                    logger.info(
-                                        "Activated subscription for user %s via API lookup",
-                                        user.id,
-                                    )
+                            customer_email = resp.json().get("data", {}).get("email", "")
                 except Exception as e:
-                    logger.exception("Failed to fetch Paddle customer: %s", e)
+                    logger.warning("Paddle customer lookup failed: %s", e)
+
+            if customer_email:
+                from app.db.repositories.user_repo import UserRepository
+                user_repo = UserRepository(db)
+                user = await user_repo.get_by_email(customer_email)
+
+        if user:
+            await repo.activate(
+                user_id=user.id,
+                provider=PaymentProvider.PADDLE,
+                provider_customer_id=customer_id,
+                provider_subscription_id=subscription_id or customer_id,
+            )
+            logger.info(
+                "✅ Activated subscription for user %s (paddle sub %s)",
+                user.id,
+                subscription_id or customer_id,
+            )
+        else:
+            logger.warning(
+                "❌ Could not find user for Paddle transaction. "
+                "app_user_id=%s, customer_id=%s",
+                app_user_id, customer_id,
+            )
 
     # ── subscription.updated ─────────────────────────────────────────
     elif event_type == "subscription.updated":
