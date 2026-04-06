@@ -189,10 +189,10 @@ async def _paddle_create_checkout(
 
 
 async def _paddle_get_portal_url(customer_id: str) -> str:
-    """Retrieve the Paddle customer portal URL.
+    """Create a Paddle customer portal session and return the URL.
 
-    Paddle's customer portal is auto-generated for each customer;
-    we simply look it up via the API.
+    Paddle requires a POST to ``/customers/{id}/portal-sessions`` to
+    generate a temporary, authenticated portal URL.
     """
     import httpx
 
@@ -202,20 +202,25 @@ async def _paddle_get_portal_url(customer_id: str) -> str:
         else "https://api.paddle.com"
     )
 
-    headers = {"Authorization": f"Bearer {settings.PADDLE_API_KEY}"}
+    headers = {
+        "Authorization": f"Bearer {settings.PADDLE_API_KEY}",
+        "Content-Type": "application/json",
+    }
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{base_url}/customers/{customer_id}",
+        response = await client.post(
+            f"{base_url}/customers/{customer_id}/portal-sessions",
+            json={},
             headers=headers,
             timeout=15.0,
         )
         response.raise_for_status()
         data = response.json()
 
-    # Paddle returns a portal URL in the customer object
-    customer = data.get("data", {})
-    return customer.get("portal_sessions_url", "")
+    # Response contains data.urls.general.overview (the portal home URL)
+    urls = data.get("data", {}).get("urls", {})
+    general = urls.get("general", {})
+    return general.get("overview", "")
 
 
 # ---------------------------------------------------------------------------
