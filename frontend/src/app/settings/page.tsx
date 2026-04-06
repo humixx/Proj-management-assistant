@@ -377,21 +377,57 @@ export default function SettingsPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               Manage your subscription, update payment methods, or change plans.
             </p>
+
+            {/* Subscription details */}
+            {billing?.subscription && billing.is_active && !billing.is_trialing && (
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700/50">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Plan</span>
+                    <p className="font-medium text-gray-900 dark:text-white capitalize">{billing.plan_type}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Provider</span>
+                    <p className="font-medium text-gray-900 dark:text-white capitalize">{billing.provider || '—'}</p>
+                  </div>
+                  {billing.current_period_end && (
+                    <div className="col-span-2">
+                      <span className="text-gray-500 dark:text-gray-400">Next renewal</span>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {new Date(billing.current_period_end).toLocaleDateString('en-US', {
+                          year: 'numeric', month: 'long', day: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-3">
-              <Link
-                href="/pricing"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
-              >
-                {billing?.is_active && !billing?.is_trialing ? 'View Plans' : 'Upgrade to Pro'}
-              </Link>
-              {billing?.subscription?.provider && (
+              {billing?.is_active && !billing?.is_trialing ? (
                 <button
                   onClick={handleOpenPortal}
                   disabled={portalLoading}
-                  className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-sm disabled:opacity-50"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm disabled:opacity-50"
                 >
-                  {portalLoading ? 'Opening...' : 'Manage Billing'}
+                  {portalLoading ? 'Opening...' : 'Manage Subscription'}
                 </button>
+              ) : (
+                <Link
+                  href="/pricing"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                >
+                  {billing?.is_trialing ? 'Upgrade to Pro' : 'View Plans'}
+                </Link>
+              )}
+              {billing?.subscription?.provider && billing.is_active && !billing.is_trialing && (
+                <Link
+                  href="/pricing"
+                  className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-sm"
+                >
+                  View Plans
+                </Link>
               )}
             </div>
           </div>
