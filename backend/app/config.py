@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     PADDLE_WEBHOOK_SECRET: str = ""
     PADDLE_PRICE_ID: str = ""        # Price ID from Paddle Dashboard (e.g. pri_xxx)
     PADDLE_ENVIRONMENT: str = "sandbox"  # "sandbox" or "production"
+    PADDLE_SKIP_SIG_VERIFY: bool = False  # Temp safety net — set True during initial rollout
 
     # JWT Authentication
     JWT_SECRET_KEY: str = "change-me-in-production"
