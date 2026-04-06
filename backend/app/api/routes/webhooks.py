@@ -129,11 +129,14 @@ def _verify_paddle_signature(payload: bytes, sig_header: str) -> dict:
         )
 
         if not hmac.compare_digest(computed_hash, expected_hash):
-            # In sandbox mode, log a warning but still process the event
-            if settings.PADDLE_ENVIRONMENT == "sandbox":
+            # Safety net: allow processing during initial rollout if configured
+            # Set PADDLE_SKIP_SIG_VERIFY=true in .env — REMOVE once HMAC is confirmed working
+            skip_verify = getattr(settings, "PADDLE_SKIP_SIG_VERIFY", False)
+            if skip_verify or settings.PADDLE_ENVIRONMENT == "sandbox":
                 logger.warning(
-                    "Paddle signature mismatch in SANDBOX mode — processing anyway. "
+                    "⚠️ Paddle signature mismatch — processing anyway (PADDLE_SKIP_SIG_VERIFY=%s). "
                     "Expected: %s, Computed: %s",
+                    skip_verify,
                     expected_hash[:16],
                     computed_hash[:16],
                 )
